@@ -1,7 +1,12 @@
 import pycode_similar
 import subprocess
 import re
-from typing import TypedDict, List
+import sys
+if sys.version_info >= (3, 8):
+    from typing import TypedDict, List
+else:
+    from typing_extensions import TypedDict
+    from typing import List
 
 
 class Candidate(TypedDict):
@@ -36,7 +41,7 @@ class CappaPlag:
         """ Преобразует полученный в результате
         применения Pycode_similar объект в строку, 
         извлекает из нее вычисленный процент плагиата 
-        и возвращает его виде целого числа. """
+        и возвращает его виде целого числа """
 
         to_str = str(data)
         out = (re.findall("\d+\.\d+", to_str)).pop()
@@ -54,7 +59,7 @@ class CappaPlag:
 
         """ Извлекает вычисленный процент плагиата из данных, 
         полученных в результате применения детектора SIM, 
-        и возвращает его в виде целого числа. """
+        и возвращает его в виде целого числа """
 
         out = (re.findall(r'\b\d+\b', data))[-1]
         result = int(out)
@@ -69,7 +74,7 @@ class CappaPlag:
     ) -> PlagResult:
         
         """ Проверка на плагиат исходного кода задач на языках, 
-        поддерживаемых детектором SIM (C++, Java). """
+        поддерживаемых детектором SIM (C++, Java) """
 
         lenght = len(candidate_info)
         plag_dict = {}
@@ -105,7 +110,7 @@ class CappaPlag:
         candidate_info: List[Candidate]
     ) -> PlagResult:
         
-        """ Проверка исходного кода задач на наличие в нем плагиата. """
+        """ Проверка исходного кода задач на наличие в нем плагиата """
 
         if lang == Lang.PYTHON:
             lenght = len(candidate_info)
@@ -115,7 +120,7 @@ class CappaPlag:
                 pycheck = pycode_similar.detect([ref_code, candidate_code], 
                                           diff_method=pycode_similar.UnifiedDiff, 
                                           keep_prints=True, module_level=True)
-                result = self._py_transform(pycheck[0][1].pop(1))
+                result = self._py_transform(pycheck[0][1].pop(0))
                 plag_dict.update({list(candidate_info[i].values())[0]: result})
             plag_user_id = max(plag_dict, key=plag_dict.get)
             plag_score = max(plag_dict.values())
@@ -141,4 +146,4 @@ class CappaPlag:
                 ref_code = ref_code, 
                 candidate_info = candidate_info
             ) 
-            return result          
+            return result        
