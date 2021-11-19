@@ -2,13 +2,21 @@ import pycode_similar
 import subprocess
 import re
 import sys
+
+# TODO Давай зафиксируем версию питона на которой работает наш проект
+#  это или 3.7 или 3.8. Это зафиксировать:
+#  - в ТЗ
+#  - в Pipfile проекта
+#  - в данном участке кода выбрать 1 вариант
 if sys.version_info >= (3, 8):
     from typing import TypedDict, List
 else:
     from typing_extensions import TypedDict
     from typing import List
 
-
+# TODO Создай файл service/entities.py и вынеси туда классы сущностей:
+#  - Candidate
+#  - PlagResult
 class Candidate(TypedDict):
 
     uuid: str
@@ -21,6 +29,8 @@ class PlagResult(TypedDict):
     result: int
 
 
+# TODO Создай файл service/enums.py и вынеси туда классы перечислений:
+#  - Lang
 class Lang:
 
     CPP = 'cpp'
@@ -32,6 +42,22 @@ class Lang:
         (PYTHON, PYTHON),
         (PYTHON, PYTHON)
     )
+
+# TODO Сам сервис мы разделим на 4 части которые отвечают
+#  за разные уровни абстракции, позволят инкапсулировать логику,
+#  добавить гибкость при масштабировании и написании unit-тестов:
+#  1. class AntiplagBaseService - реализует интерфейсы публичных методов
+#  сервиса + методы общие и для pycode_similar и для sim
+#  2. class PycodeSimilarService(AntiplagBaseService) - реализует
+#  публичные методы AntiplagBaseService и реализует проверку антиплагиата
+#  через pycode_similar
+#  3. class SimService(AntiplagBaseService) - реализует
+#  публичные методы AntiplagBaseService и реализует проверку антиплагиата
+#  через sim
+#  4. class AntiplagService - высокоуровневый сервис, принимает запрос,
+#  и в зависимости от ЯП передает его на обработку на нижележащий уровень либо
+#  в PycodeSimilarService либо в SimService, возвращает результат обработки
+#  с нижележащего уровня, сам никаких вычислений не производит.
 
 
 class CappaPlag:
