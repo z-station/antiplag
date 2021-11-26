@@ -6,6 +6,11 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
+pycode_similar = "1.4"
+typing_extensions = "*"
+gunicorn = "*"
+flask = "*"
+flask-cors = "*"
 
 [requires]
 python_version = "3.7"

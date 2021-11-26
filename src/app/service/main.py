@@ -5,22 +5,17 @@ from abc import ABC, abstractmethod
 from typing import List
 
 from enums import Lang
-from entities import Candidate, PlagResult
+from entities import Candidates, RequestPlag, ResponsePlag
 
 
 class AntiplagBaseService(ABC):
 
     @abstractmethod
-    def check(
-        self, 
-        lang: Lang.CHOICES,
-        ref_code: str, 
-        candidate_info: List[Candidate]
-    ) -> PlagResult:
-        pass
-    
-    @abstractmethod
     def _transform(self, data) -> int:
+        pass
+
+    @abstractmethod
+    def _check(self, data: RequestPlag) -> ResponsePlag:
         pass
 
 
@@ -45,15 +40,14 @@ class PycodeSimilarService(AntiplagBaseService):
             result = int(out[2:])
         return result
     
-    def check(
-        self, 
-        lang: Lang.CHOICES, 
-        ref_code: str, 
-        candidate_info: List[Candidate]
-    ) -> PlagResult:
+    def _check(self, data: RequestPlag) -> ResponsePlag:
         
         """ Проверка на плагиат исходного кода задач на языках, 
-        поддерживаемых детектором Pycode_similar (Python). """
+            поддерживаемых детектором Pycode_similar (Python). """
+
+        lang: Lang.CHOICES = data['lang']
+        ref_code: str = data['ref_code']
+        candidate_info: List[Candidates] = data['candidate_info']
 
         if lang == Lang.PYTHON:
             lenght = len(candidate_info)
@@ -67,7 +61,7 @@ class PycodeSimilarService(AntiplagBaseService):
                 plag_dict.update({list(candidate_info[i].values())[0]: result})
             plag_user_id = max(plag_dict, key=plag_dict.get)
             plag_score = max(plag_dict.values())
-            plagiarism = PlagResult(
+            plagiarism = ResponsePlag(
                 uuid = plag_user_id, 
                 result = plag_score
             )
@@ -79,22 +73,21 @@ class SimService(AntiplagBaseService):
     def _transform(self, data) -> int:
         
         """ Извлекает вычисленный процент плагиата из данных, 
-        полученных в результате применения детектора SIM, 
-        и возвращает его в виде целого числа. """
+            полученных в результате применения детектора SIM, 
+            и возвращает его в виде целого числа. """
 
         out = (re.findall(r'\b\d+\b', data))[-1]
         result = int(out)
         return result
 
-    def check(
-        self, 
-        lang: Lang.CHOICES, 
-        ref_code: str, 
-        candidate_info: List[Candidate]
-    ) -> PlagResult:
+    def _check(self, data: RequestPlag) -> ResponsePlag:
 
         """ Проверка на плагиат исходного кода задач на языках, 
-        поддерживаемых детектором SIM (C++, Java). """
+            поддерживаемых детектором SIM (C++, Java). """
+
+        lang: Lang.CHOICES = data['lang']
+        ref_code: str = data['ref_code']
+        candidate_info: List[Candidates] = data['candidate_info']
 
         lenght = len(candidate_info)
         plag_dict = {}
@@ -119,7 +112,7 @@ class SimService(AntiplagBaseService):
             plag_dict.update({list(candidate_info[i].values())[0]: result})
         plag_user_id = max(plag_dict, key=plag_dict.get)
         plag_score = max(plag_dict.values())
-        plagiarism = PlagResult(
+        plagiarism = ResponsePlag(
             uuid = plag_user_id,
             result = plag_score
         )
@@ -127,18 +120,14 @@ class SimService(AntiplagBaseService):
 
 class AntiplagService:
 
-    def perform(
-        self, 
-        lang: Lang.CHOICES, 
-        ref_code: str, 
-        candidate_info: List[Candidate]
-    ) -> None:
+    def perform(self, data: RequestPlag ) -> None:
 
         """ Проверка исходного кода задач на наличие в нем плагиата. """
 
+        lang: Lang.CHOICES = data['lang']
+
         if lang == Lang.PYTHON:
             obj = PycodeSimilarService()
-            return obj.check(lang, ref_code, candidate_info)
         elif lang == Lang.CPP or lang == Lang.JAVA:
             obj = SimService()
-            return obj.check(lang, ref_code, candidate_info)
+        return obj._check(data)
