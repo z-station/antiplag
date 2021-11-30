@@ -93,6 +93,19 @@ class SimService(AntiplagBaseService):
         plag_dict = {}
         
         if lang == Lang.CPP:
+            # TODO
+            #  1. Нужно определить какую-то конкретную директорию на диске
+            #  где будут создаваться эти временные файлы
+            #  2. Названия файлов должны быть уникальными, т.к. если
+            #  параллельно будет работать нескольк инстансов сервиса то они
+            #  будут читать и писать в одни и те же файлы
+            #  3. После оконкчания работы нужно удалять файлы
+            #  4. В идеале каждая функция должна делать одну вещь потому
+            #  управление файлами нужно вынести в отдельную утилиту
+            #  Смотри пример реализации тут https://github.com/z-station/sandbox-python38/blob/master/src/app/entities/translator.py
+            #  Управление файлами сделано через класс PythonFile,
+            #  здесь нужно сделать нечто похожее
+
             file_1, file_2 = 't1.cpp', 't2.cpp'
             settings = 'sim_c++ -r4 -s -p  t1.cpp t2.cpp'
         elif lang == Lang.JAVA:
@@ -118,9 +131,11 @@ class SimService(AntiplagBaseService):
         )
         return plagiarism
 
+
 class AntiplagService:
 
     def perform(self, data: RequestPlag ) -> None:
+        # TODO давай назовем этот метод check
 
         """ Проверка исходного кода задач на наличие в нем плагиата. """
 
