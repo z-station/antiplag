@@ -1,6 +1,10 @@
 import os
 from os import environ as env
 from tempfile import gettempdir
+from flask import Flask
+
+app = Flask(__name__)
+root = app.root_path
 
 SANDBOX_DIR = env.get('SANDBOX_DIR', gettempdir())
 TIMEOUT = 5  # seconds

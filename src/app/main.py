@@ -12,7 +12,7 @@ from app.service.entities import (
 
 app = Flask(__name__)
 CORS(app)
-server = AntiplagService()
+service = AntiplagService()
 
 
 @app.route('/', methods=['get'])
@@ -23,5 +23,5 @@ def index():
 @app.route('/check/', methods=['post'])
 def check() -> ResponsePlag:
     data: RequestPlag = request.json
-    result = server.check(data)
+    result = service.check(data)
     return result
