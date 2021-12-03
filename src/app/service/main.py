@@ -9,8 +9,7 @@ from app.service.entities import (
     Candidates,
     RequestPlag,
     ResponsePlag)
-from app.service.translator import PlagFile
-from app.config import root
+from app.service.utils import PlagFile
 
 
 class AntiplagBaseService(ABC):
@@ -51,14 +50,14 @@ class PycodeSimilarService(AntiplagBaseService):
             lenght = len(candidate_info)
             plag_dict = {}
             for i in range(0, lenght):
-                candidate_code = list(candidate_info[i].values())[0]
+                candidate_code = list(candidate_info[i].values())[1]
                 pycheck = py_sim.detect(
                     [ref_code, candidate_code],
                     diff_method=py_sim.UnifiedDiff,
                     keep_prints=True,
                     module_level=True)
                 result = self._transform(pycheck[0][1].pop(0))
-                plag_dict.update({list(candidate_info[i].values())[1]: result})
+                plag_dict.update({list(candidate_info[i].values())[0]: result})
             plag_user_id = max(plag_dict, key=plag_dict.get)
             plag_score = max(plag_dict.values())
             if plag_score == 0:
@@ -82,10 +81,13 @@ class SimService(AntiplagBaseService):
             полученных в результате применения детектора SIM,
             и возвращает его в виде целого числа. """
 
-        procent = data.find("%")
-        fragment = data[procent-4:procent]
-        out = re.findall(r'\b\d+\b', fragment)[-1]
-        result = int(out)/100
+        if '%' in data:
+            procent = data.find('%')
+            fragment = data[procent-4:procent]
+            out = re.findall(r'\b\d+\b', fragment)[-1]
+            result = int(out)/100
+        else:
+            result = 0
         return result
 
     def _check(self, data: RequestPlag) -> ResponsePlag:
@@ -101,22 +103,20 @@ class SimService(AntiplagBaseService):
         plag_dict = {}
 
         if lang == Lang.CPP:
-            settings = '\detectors\sim_c++ -r4 -s -p'
+            settings = '/usr/bin/sim_c++ -r4 -s -p'
         elif lang == Lang.JAVA:
-            settings = '\detectors\sim_java -r4 -s -p'
-
-        path = ''.join((root, settings))
+            settings = '/usr/bin/sim_java -r4 -s -p'
 
         ref = PlagFile(code=ref_code, lang=lang)
 
         for i in range(0, lenght):
-            candidate_code = list(candidate_info[i].values())[0]
+            candidate_code = list(candidate_info[i].values())[1]
             cand = PlagFile(code=candidate_code, lang=lang)
-            sim_tuple = (path, ref.filepath, cand.filepath)
+            sim_tuple = (settings, ref.filepath, cand.filepath)
             sim_settings = ' '.join(sim_tuple)
             simcheck = subprocess.getoutput(sim_settings)
             result = self._transform(simcheck)
-            plag_dict.update({list(candidate_info[i].values())[1]: result})
+            plag_dict.update({list(candidate_info[i].values())[0]: result})
             cand.remove()
         ref.remove()
         plag_user_id = max(plag_dict, key=plag_dict.get)
