@@ -28,9 +28,9 @@ class PycodeSimilarService(AntiplagBaseService):
     def _transform(self, data) -> int:
 
         """ Преобразует полученный в результате
-            применения Pycode_similar объект в строку,
-            извлекает из нее вычисленный процент плагиата
-            и возвращает его виде целого числа. """
+        применения Pycode_similar объект в строку,
+        извлекает из нее вычисленный процент плагиата
+        и возвращает его виде вещественного числа. """
 
         to_str = str(data)
         out = (re.findall(r'\d+\.\d+', to_str)).pop()
@@ -40,7 +40,7 @@ class PycodeSimilarService(AntiplagBaseService):
     def _check(self, data: RequestPlag) -> ResponsePlag:
 
         """ Проверка на плагиат исходного кода задач на языках,
-            поддерживаемых детектором Pycode_similar (Python). """
+        поддерживаемых детектором Pycode_similar (Python). """
 
         lang: str = data['lang']
         ref_code: str = data['ref_code']
@@ -78,12 +78,12 @@ class SimService(AntiplagBaseService):
     def _transform(self, data) -> int:
 
         """ Извлекает вычисленный процент плагиата из данных,
-            полученных в результате применения детектора SIM,
-            и возвращает его в виде целого числа. """
+        полученных в результате применения детектора SIM,
+        и возвращает его в виде вещественного числа. """
 
         if '%' in data:
-            procent = data.find('%')
-            fragment = data[procent-4:procent]
+            percent = data.find('%')
+            fragment = data[percent-4:percent]
             out = re.findall(r'\b\d+\b', fragment)[-1]
             result = int(out)/100
         else:
@@ -93,7 +93,7 @@ class SimService(AntiplagBaseService):
     def _check(self, data: RequestPlag) -> ResponsePlag:
 
         """ Проверка на плагиат исходного кода задач на языках,
-            поддерживаемых детектором SIM (C++, Java). """
+        поддерживаемых детектором SIM (C++, Java). """
 
         lang: str = data['lang']
         ref_code: str = data['ref_code']

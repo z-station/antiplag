@@ -8,7 +8,7 @@ from app.config import SANDBOX_DIR
 class PlagFile:
 
     """ Описывает файлы, используемые детектором плагиата SIM для
-        проверки исходного кода задач на наличие в нем плагиата. """
+    проверки исходного кода задач на наличие в нем плагиата. """
 
     def __init__(self, code: str, lang: str):
         if lang == Lang.CPP:
