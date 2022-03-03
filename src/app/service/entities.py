@@ -24,4 +24,4 @@ class ResponsePlag(TypedDict):
     """ Описывает формат результата сравнения файлов """
 
     uuid: int
-    percent: int
+    percent: float

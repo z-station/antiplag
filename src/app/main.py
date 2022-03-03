@@ -1,27 +1,66 @@
-from flask import Flask, request
-from flask import render_template
-from flask_cors import CORS
-
-from app import config
-
-from app.service.main import AntiplagService
-from app.service.entities import (
-    RequestPlag,
-    ResponsePlag
+from urllib import response
+from flask import (
+    Flask, 
+    request,
+    render_template,
+    abort
 )
 
-app = Flask(__name__)
-CORS(app)
-service = AntiplagService()
+# from flask_cors import CORS
+from marshmallow import ValidationError
+from app import config
+from app.service.main import AntiplagService
+# from app.service.entities import (
+#     RequestPlag,
+#     ResponsePlag
+# )
+from app.schema import (
+    CheckSchema,
+    BadRequestSchema
+)
+from app.service.exceptions import ServiceException
 
 
-@app.route('/', methods=['get'])
-def index():
-    return render_template("index.html")
+def create_app():
+
+    app = Flask(__name__)
+
+    @app.errorhandler(400)
+    def bad_request_handler(ex: Exception):
+        return BadRequestSchema().dump(ex), 400
+    
+    @app.route('/', methods=['get'])
+    def index():
+        return render_template("index.html")
+
+    @app.route('/check/', methods=['post'])
+    def check():
+        schema = CheckSchema()
+        info = AntiplagService()
+        try:
+            data = info.check(
+                data = schema.load(request.get_json())
+            )
+        except (ServiceException, ValidationError) as ex:
+            abort(400, ex)
+        else:
+            return schema.dump(data)
+    return app
+
+app = create_app()
+
+# app = Flask(__name__)
+# CORS(app)
+# service = AntiplagService()
 
 
-@app.route('/check/', methods=['post'])
-def check() -> ResponsePlag:
-    data: RequestPlag = request.json
-    result = service.check(data)
-    return result
+# @app.route('/', methods=['get'])
+# def index():
+#     return render_template("index.html")
+
+
+# @app.route('/check/', methods=['post'])
+# def check() -> ResponsePlag:
+#     data: RequestPlag = request.json
+#     result = service.check(data)
+#     return result
