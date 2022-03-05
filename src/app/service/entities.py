@@ -9,6 +9,8 @@ class Candidates(TypedDict):
     uuid: str
     code: str
 
+# TODO т.к сущности используются на уровне функции сервиса check то, наверно лучше
+#  не использовать слова Request и Responce. Например CheckInput и CheckResult
 
 class RequestPlag(TypedDict):
 
@@ -24,4 +26,4 @@ class ResponsePlag(TypedDict):
     """ Описывает формат результата сравнения файлов """
 
     uuid: int
-    percent: int
+    percent: float

@@ -5,9 +5,6 @@ services:
   cappa-antiplag:
     build:
       context: ..
-      args:
-        - SANDBOX_USER_UID=999
-        - SANDBOX_DIR=/sandbox
       dockerfile: ./docker/Dockerfile
     container_name: cappa-antiplag
     image: cappa-antiplag
