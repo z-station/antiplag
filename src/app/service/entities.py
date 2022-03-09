@@ -1,5 +1,8 @@
 from typing_extensions import TypedDict
-from typing import List
+from typing import (
+    List,
+    Union
+)
 
 
 class Candidates(TypedDict):
@@ -9,10 +12,8 @@ class Candidates(TypedDict):
     uuid: str
     code: str
 
-# TODO т.к сущности используются на уровне функции сервиса check то, наверно лучше
-#  не использовать слова Request и Responce. Например CheckInput и CheckResult
 
-class RequestPlag(TypedDict):
+class CheckInput(TypedDict):
 
     """ Описывает формат запрашиваемых данных """
 
@@ -21,9 +22,9 @@ class RequestPlag(TypedDict):
     candidate_info: List[Candidates]
 
 
-class ResponsePlag(TypedDict):
+class CheckResult(TypedDict):
 
     """ Описывает формат результата сравнения файлов """
 
-    uuid: int
+    uuid: Union[int, None]
     percent: float

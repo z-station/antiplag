@@ -7,8 +7,8 @@ from typing import List
 from app.service.enums import Lang
 from app.service.entities import (
     Candidates,
-    RequestPlag,
-    ResponsePlag
+    CheckInput,
+    CheckResult
 )
 from app.service.utils import PlagFile
 
@@ -16,29 +16,70 @@ from app.service.utils import PlagFile
 class AntiplagBaseService(ABC):
 
     @abstractmethod
-    def _transform(self, data) -> int:
+    def _transform_plag_data(self, data) -> float:
         pass
 
     @abstractmethod
-    def _check(self, data: RequestPlag) -> ResponsePlag:
+    def _check_plag_candidate(self, check_data) -> float:
+        pass
+
+    @abstractmethod
+    def _calc_plag_results(self, plag_dict: dict) -> CheckResult:
+        pass
+
+    @abstractmethod
+    def _check_plagiarism(self, data: CheckInput) -> CheckResult:
         pass
 
 
 class PycodeSimilarService(AntiplagBaseService):
 
-    def _transform(self, data) -> int:
+    def _transform_plag_data(self, data) -> float:
 
         """ Преобразует полученный в результате
         применения Pycode_similar объект в строку,
         извлекает из нее вычисленный процент плагиата
         и возвращает его виде вещественного числа. """
 
-        to_str = str(data)
-        out = (re.findall(r'\d+\.\d+', to_str)).pop()
-        result = float(out)
+        transform_to_str = str(data)
+        find_plag_persent = re.findall(r'\d+\.\d+', transform_to_str)
+        plag_persent = find_plag_persent.pop()
+        result = float(plag_persent)
         return result
 
-    def _check(self, data: RequestPlag) -> ResponsePlag:
+    def _check_plag_candidate(self, check_data) -> float:
+
+        """ Осуществляет проверку на наличие плагиата
+        в решении очередного кандидата для сравнения
+        (на языкe программирования Python) и
+        возвращает полученный процент плагиата. """
+
+        pycheck = py_sim.detect(
+            check_data,
+            diff_method=py_sim.UnifiedDiff,
+            keep_prints=True,
+            module_level=True)
+        pycheck_data = pycheck[0][1].pop(0)
+        pycheck_plag_percent = self._transform_plag_data(pycheck_data)
+        return pycheck_plag_percent
+
+    def _calc_plag_results(self, plag_dict: dict) -> CheckResult:
+
+        """ Производит подсчет результатов плагиата и возвращает
+        id кандидата с максимальным процентом заимствований. """
+
+        plag_user_id = max(plag_dict, key=plag_dict.get)
+        plag_score = max(plag_dict.values())
+
+        uuid = None if plag_score == 0 else plag_user_id
+
+        plag_percent = CheckResult(
+            uuid=uuid,
+            percent=plag_score
+        )
+        return plag_percent
+
+    def _check_plagiarism(self, data: CheckInput) -> CheckResult:
 
         """ Проверка на плагиат исходного кода задач на языках,
         поддерживаемых детектором Pycode_similar (Python). """
@@ -47,53 +88,74 @@ class PycodeSimilarService(AntiplagBaseService):
         ref_code: str = data['ref_code']
         candidate_info: List[Candidates] = data['candidate_info']
 
-        if lang == Lang.PYTHON:
-            lenght = len(candidate_info)
-            plag_dict = {}
-            for i in range(0, lenght):
-                candidate_code = list(candidate_info[i].values())[1]
-                pycheck = py_sim.detect(
-                    [ref_code, candidate_code],
-                    diff_method=py_sim.UnifiedDiff,
-                    keep_prints=True,
-                    module_level=True)
-                result = self._transform(pycheck[0][1].pop(0))
-                plag_dict.update({list(candidate_info[i].values())[0]: result})
-            plag_user_id = max(plag_dict, key=plag_dict.get)
-            plag_score = max(plag_dict.values())
-            if plag_score == 0:
-                plagiarism = ResponsePlag(
-                    uuid=None,
-                    percent=0
-                )
-            else:
-                plagiarism = ResponsePlag(
-                    uuid=plag_user_id,
-                    percent=plag_score
-                )
-            return plagiarism
+        lenght = len(candidate_info)
+        plag_dict = {}
+        for i in range(0, lenght):
+
+            # Возвращает значения словаря candidate_info
+            candidate_dict_values = candidate_info[i].values()
+
+            # Извлекает id кандидата для сравнения
+            candidate_uuid = list(candidate_dict_values)[0]
+
+            # Извлекает код кандидата для сравнения
+            candidate_code = list(candidate_dict_values)[1]
+
+            check_data = [ref_code, candidate_code]
+
+            result = self._check_plag_candidate(check_data)
+
+            plag_dict.update({candidate_uuid: result})
+
+        plag_result = self._calc_plag_results(plag_dict)
+        return plag_result
 
 
 class SimService(AntiplagBaseService):
 
-    # TODO названим функции должен быть глагол который
-    #  описывает выполняемое действие, напимер get_plagiarism_percent
-    def _transform(self, data) -> int:
+    def _transform_plag_data(self, data) -> float:
 
         """ Извлекает вычисленный процент плагиата из данных,
         полученных в результате применения детектора SIM,
         и возвращает его в виде вещественного числа. """
 
         if '%' in data:
-            percent = data.find('%')
-            fragment = data[percent-4:percent]
-            out = re.findall(r'\b\d+\b', fragment)[-1]
-            result = int(out)/100
+            find_percent = data.find('%')
+            find_fragment = data[find_percent-4:find_percent]
+            plag_persent = re.findall(r'\b\d+\b', find_fragment)[-1]
+            result = int(plag_persent)/100
         else:
             result = 0
         return result
 
-    def _check(self, data: RequestPlag) -> ResponsePlag:
+    def _check_plag_candidate(self, check_data) -> float:
+
+        """ Осуществляет проверку на наличие плагиата
+        в решении очередного кандидата для сравнения
+        (на языках, поддерживаемых детектором SIM) и
+        возвращает полученный процент плагиата. """
+
+        sim_cmd_output = subprocess.getoutput(check_data)
+        result = self._transform_plag_data(sim_cmd_output)
+        return result
+
+    def _calc_plag_results(self, plag_dict: dict) -> CheckResult:
+
+        """ Производит подсчет результатов плагиата и возвращает
+        id кандидата с максимальным процентом заимствований. """
+
+        plag_user_id = max(plag_dict, key=plag_dict.get)
+        plag_score = max(plag_dict.values())
+
+        uuid = None if plag_score == 0 else plag_user_id
+
+        plag_percent = CheckResult(
+            uuid=uuid,
+            percent=plag_score
+        )
+        return plag_percent
+
+    def _check_plagiarism(self, data: CheckInput) -> CheckResult:
 
         """ Проверка на плагиат исходного кода задач на языках,
         поддерживаемых детектором SIM (C++, Java). """
@@ -102,86 +164,51 @@ class SimService(AntiplagBaseService):
         ref_code: str = data['ref_code']
         candidate_info: List[Candidates] = data['candidate_info']
 
-        lenght = len(candidate_info) # TODO опечатка: length
+        length = len(candidate_info)
         plag_dict = {}
 
-        # TODO можно написать элегантнее без дублирования
-        # checker_module_name = 'sim_c++' if lang == Lang.CPP else 'sim_java'
-        # checker_command = f'/usr/bin/{checker_module_name} -r4 -s -p'
-        if lang == Lang.CPP:
-            settings = '/usr/bin/sim_c++ -r4 -s -p'
-        elif lang == Lang.JAVA:
-            settings = '/usr/bin/sim_java -r4 -s -p'
+        checker_module_name = 'sim_c++' if lang == Lang.CPP else 'sim_java'
+        checker_command = f'/usr/bin/{checker_module_name} -r4 -s -p'
 
+        reference_file = PlagFile(code=ref_code, lang=lang)
+        reference_path = reference_file.filepath
 
-        # TODO что значит ref ??? Нейминг!!!!
-        ref = PlagFile(code=ref_code, lang=lang)
+        for i in range(0, length):
 
-        # TODO итерируй по элементам
-        for i in range(0, lenght):
-            # TODO Рекомендую вынести в отдельную функцию проверку очередного кандидата
-            #  на плагиат - юнит тесты будет писать проще
+            # Возвращает значения словаря candidate_info
+            candidate_dict_values = candidate_info[i].values()
 
-            # TODO Рекомендую вынести получение консольной команды sim в отдельную функцию
+            # Извлекает id кандидата для сравнения
+            candidate_uuid = list(candidate_dict_values)[0]
 
-            # TODO непонятный код, здесь у тебя подразумевается обращение
-            #  к какой-то чежстко фиксированной структуре, но из кода не понятно,
-            #  это просто куча операторов в одной строке которые что-то делают,
-            #  опиши более детально, разбей на несколько строк "Сложное лучше чем запутанное, а простое лучше сложного"
-            candidate_code = list(candidate_info[i].values())[1]
-            # TODO нейминг переменных!! что за cand, как это связано с содержимым? candidate_code_file больше отражает содердимое
-            cand = PlagFile(code=candidate_code, lang=lang)
+            # Извлекает код кандидата для сравнения
+            candidate_code = list(candidate_dict_values)[1]
 
-            # TODO Можно сделать более читаемо:
-            # cmd = f'{command} {path_1} {path_2}'.format(
-            #    command=checker_command,
-            #    path_1=code_file.filepath,
-            #    path_2=candidate_code_file.filepath
-            # )
-            sim_tuple = (settings, ref.filepath, cand.filepath)
-            sim_settings = ' '.join(sim_tuple)
-            # TODO что за simcheck, как я из названия должен
-            #  понять что содержится внутри переменной? Нейминг!!!!
+            candidate_code_file = PlagFile(code=candidate_code, lang=lang)
+            candidate_path = candidate_code_file.filepath
 
-            simcheck = subprocess.getoutput(sim_settings)
-            result = self._transform(simcheck)
-            # TODO такие конструкции это не pythonic стиль программирования,
-            #  код должен быть простым, читаемым. Убрать много вложенностей
-            #  и разложить на читаемые конструкции
-            plag_dict.update({list(candidate_info[i].values())[0]: result})
-            cand.remove()
-        ref.remove()
-        # TODO подсчет плагиата лучше вынести в отдельную функцию
-        plag_user_id = max(plag_dict, key=plag_dict.get)
-        plag_score = max(plag_dict.values())
-        # TODO Дублирование кода можно убрать
-        if plag_score == 0:
-            plagiarism = ResponsePlag(
-                uuid=None, # TODO аннотирование атрибута в ResponsePlag не допускает значение None
-                percent=0
-            )
-        else:
-            plagiarism = ResponsePlag(
-                uuid=plag_user_id,
-                percent=plag_score
-            )
-        return plagiarism
+            cmd = f'{checker_command} {reference_path} {candidate_path}'
+
+            result = self._check_plag_candidate(cmd)
+
+            plag_dict.update({candidate_uuid: result})
+            candidate_code_file.remove()
+        reference_file.remove()
+        plag_result = self._calc_plag_results(plag_dict)
+        return plag_result
 
 
 class AntiplagService:
 
-    # TODO Если функция ничего не возвращает то не нужно писать аннотирование  -> None:
-    # TODO в твоем случае функция вообще то возвращает кое что
-    def check(self, data: RequestPlag) -> None:
+    def check(self, data: CheckInput):
 
         """ Проверка исходного кода задач на наличие в нем плагиата. """
 
         lang: str = data['lang']
 
-        if lang == Lang.PYTHON:
-            obj = PycodeSimilarService()
-        # TODO удачнее будет все языки поделить по группам относительно sim или
-        #  PycodeSImilar и проверять к какой группе принадлежит язык типа: if lang in Lang.SIM_LANGS
-        elif lang == Lang.CPP or lang == Lang.JAVA:
-            obj = SimService()
-        return obj._check(data)
+        if lang in Lang.SIM_LANGS:
+            object = SimService()
+        else:
+            object = PycodeSimilarService()
+
+        return object._check_plagiarism(data)

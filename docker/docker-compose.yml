@@ -12,8 +12,5 @@ services:
       - ../src:/app/src
     ports:
       - "8001:8001"
-    environment:
-      - SANDBOX_USER_UID=999
-      - SANDBOX_DIR=/sandbox
     restart: on-failure
     command: gunicorn --pythonpath '/app/src' --bind 0:8001 app.main:app --reload -w 1

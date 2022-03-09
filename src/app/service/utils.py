@@ -2,7 +2,7 @@ import os
 import uuid
 
 from app.service.enums import Lang
-from app.config import SANDBOX_DIR
+from app.config import TEMP_DIR
 
 
 class PlagFile:
@@ -15,7 +15,7 @@ class PlagFile:
             self.filename = f'{uuid.uuid4()}.cpp'
         elif lang == Lang.JAVA:
             self.filename = f'{uuid.uuid4()}.java'
-        self.filepath = os.path.join(SANDBOX_DIR, self.filename)
+        self.filepath = os.path.join(TEMP_DIR, self.filename)
         with open(self.filepath, 'w') as file:
             file.write(code)
             file.close()
