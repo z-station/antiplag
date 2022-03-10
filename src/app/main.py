@@ -28,11 +28,10 @@ def create_app():
         service = AntiplagService()
         try:
             request_data: CheckInput = request.json
-
             data = service.check(
                 data=schema.load(request_data)
             )
-        except (ValidationError) as ex:
+        except ValidationError as ex:
             abort(400, ex)
         else:
             return schema.dump(data)
