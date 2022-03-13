@@ -22,6 +22,8 @@ class AntiplagBaseService(ABC):
 
 class PycodeSimilarService(AntiplagBaseService):
 
+    # TODO назови переменную data более содержательно и укажи ее тип
+    #   например pycode_output
     def _get_value_from_pycode_output(self, data) -> float:
 
         """ Преобразует полученный в результате
@@ -29,12 +31,19 @@ class PycodeSimilarService(AntiplagBaseService):
         извлекает из нее вычисленный процент плагиата
         и возвращает его виде вещественного числа. """
 
+        # TODO это приведение типа тут точно нужно, какой тип приводим к str?
         transform_to_str = str(data)
         find_plag_percent = re.findall(r'\d+\.\d+', transform_to_str)
         plag_persent = find_plag_percent.pop()
         result = float(plag_persent)
         return result
 
+    # TODO Какой тип имеет check_data, более осмысленно назвать
+    #   вижу из документации pycode_similar что data это
+    #   [referenced_code_str, candidate_code_str1, candidate_code_str2, ...]
+    #   тогда в функцию вместо check_data более осмысленно будет передавать два аргумента:
+    #   referenced_code: str и candidate_code: str, а внутри уже их пихать в метод pycode.detect
+    #   * По возможности используй tuple вместо list, там где список неизменяемый т.к. list жрет оперативную память
     def _get_percent_from_pycode_candidate(self, check_data) -> float:
 
         """ Осуществляет проверку на наличие плагиата
@@ -47,24 +56,26 @@ class PycodeSimilarService(AntiplagBaseService):
             diff_method=pycode.UnifiedDiff,
             keep_prints=True,
             module_level=True)
+        # TODO надо более осмысленно разобрать результат работы pycode.detect,
+        #  место также содержит потенциальный AttributrError или IndexError
+        #  нужна обработка случая если результат pycode.detect вернет иной результат
+        #  Нужно поднимать ServiceException
         pycheck_data = pycheck[0][1].pop(0)
         pycheck_plag_percent = self._get_value_from_pycode_output(pycheck_data)
         return pycheck_plag_percent
 
     def _get_candidate_with_max_plag(self, plag_dict: dict) -> CheckResult:
 
-        """ Возвращает кандидата с максимальным процентом заимствований. """
+        """ Возвращает кандидата с максимальным процентом заимствований """
 
-        plag_user_id = max(plag_dict, key=plag_dict.get)
-        plag_score = max(plag_dict.values())
-
-        uuid = None if plag_score == 0 else plag_user_id
-
-        plag_percent = CheckResult(
+        max_value_key = max(plag_dict, key=plag_dict.get)
+        # TODO здесть достаточно один раз считать max, вот так
+        max_value = plag_dict[max_value_key]
+        uuid = None if max_value == 0 else max_value_key
+        return CheckResult(
             uuid=uuid,
-            percent=plag_score
+            percent=max_value
         )
-        return plag_percent
 
     def _check_plagiarism(self, data: CheckInput) -> CheckResult:
 
@@ -87,6 +98,7 @@ class PycodeSimilarService(AntiplagBaseService):
 
 class SimService(AntiplagBaseService):
 
+    # TODO Описать тип data, более осмысленно назвать
     def _get_value_from_sim_console_output(self, data) -> float:
 
         """ Извлекает вычисленный процент плагиата из данных,
@@ -106,6 +118,10 @@ class SimService(AntiplagBaseService):
 
         """ Возвращает кандидата с максимальным процентом заимствований. """
 
+        # TODO посмотри как я сделал для
+        #  PycodeSimilarService._get_candidate_with_max_plag
+        #  Вообще есть ощущение что эта функция одинаковая в обоих сервисах,
+        #  а значит ее можно вынести в AntiplagBaseService
         plag_user_id = max(plag_dict, key=plag_dict.get)
         plag_score = max(plag_dict.values())
 
