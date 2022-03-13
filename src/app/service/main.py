@@ -20,9 +20,17 @@ class AntiplagBaseService(ABC):
     def _check_plagiarism(self, data: CheckInput) -> CheckResult:
         pass
 
-    @abstractmethod
     def _get_candidate_with_max_plag(self, plag_dict: dict) -> CheckResult:
-        pass
+
+        """ Возвращает кандидата с максимальным процентом заимствований. """
+
+        max_value_key = max(plag_dict, key=plag_dict.get)
+        max_value = plag_dict[max_value_key]
+        uuid = None if max_value == 0 else max_value_key
+        return CheckResult(
+            uuid=uuid,
+            percent=max_value
+        )
 
 
 class PycodeSimilarService(AntiplagBaseService):
@@ -37,16 +45,14 @@ class PycodeSimilarService(AntiplagBaseService):
         извлекает из нее вычисленный процент плагиата
         и возвращает его виде вещественного числа. """
 
-        transform_to_str = str(pycode_output)
-        find_plag_percent = re.findall(r'\d+\.\d+', transform_to_str)
-        plag_persent = find_plag_percent.pop()
-        result = float(plag_persent)
-        return result
+        pycode_output_str = str(pycode_output)
+        values = re.findall(r'\d+\.\d+', pycode_output_str)
+        return float(values.pop())
 
     def _get_percent_from_pycode_candidate(
-            self,
-            referenced_code: str,
-            candidate_code: str
+        self,
+        referenced_code: str,
+        candidate_code: str
     ) -> float:
 
         """ Осуществляет проверку на наличие плагиата
@@ -63,18 +69,6 @@ class PycodeSimilarService(AntiplagBaseService):
         pycheck_plag_percent = self._get_value_from_pycode_output(pycheck_data)
         return pycheck_plag_percent
 
-    def _get_candidate_with_max_plag(self, plag_dict: dict) -> CheckResult:
-
-        """ Возвращает кандидата с максимальным процентом заимствований. """
-
-        max_value_key = max(plag_dict, key=plag_dict.get)
-        max_value = plag_dict[max_value_key]
-        uuid = None if max_value == 0 else max_value_key
-        return CheckResult(
-            uuid=uuid,
-            percent=max_value
-        )
-
     def _check_plagiarism(self, data: CheckInput) -> CheckResult:
 
         """ Проверка на плагиат исходного кода задач на языках,
@@ -88,9 +82,14 @@ class PycodeSimilarService(AntiplagBaseService):
         for candidate in candidate_info:
             candidate_code = candidate['code']
             candidate_uuid = candidate['uuid']
+            # TODO Когда в функция принимает больше одного аргумента
+            #  - используй именованные аргументы. Это нужно для гибкости кода.
+            #  Если автор функции добавит новые аргументы
+            #  или изменит порядок существующих - твой код не сломается, только
+            #  если аргументы именованные.
             plag_percent = self._get_percent_from_pycode_candidate(
                 ref_code,
-                candidate_code)
+                candidate_code) # TODO Закрывающая скобка всегда на новой строке
             plag_percent_by_uuids[candidate_uuid] = plag_percent
         return self._get_candidate_with_max_plag(plag_percent_by_uuids)
 
@@ -107,25 +106,15 @@ class SimService(AntiplagBaseService):
         и возвращает его в виде вещественного числа. """
 
         if '%' in sim_console_output:
-            find_percent = sim_console_output.find('%')
-            find_fragment = sim_console_output[find_percent-4:find_percent]
-            plag_percent = re.findall(r'\b\d+\b', find_fragment)[-1]
-            result = int(plag_percent)/100
+            percent_char_index = sim_console_output.find('%')
+            value_fragment = sim_console_output[
+                percent_char_index-4: percent_char_index
+            ]
+            str_value = re.findall(r'\b\d+\b', value_fragment)[-1]
+            result = int(str_value)/100
         else:
             result = 0
         return result
-
-    def _get_candidate_with_max_plag(self, plag_dict: dict) -> CheckResult:
-
-        """ Возвращает кандидата с максимальным процентом заимствований. """
-
-        max_value_key = max(plag_dict, key=plag_dict.get)
-        max_value = plag_dict[max_value_key]
-        uuid = None if max_value == 0 else max_value_key
-        return CheckResult(
-            uuid=uuid,
-            percent=max_value
-        )
 
     def _check_plagiarism(self, data: CheckInput) -> CheckResult:
 
