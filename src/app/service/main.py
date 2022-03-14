@@ -51,7 +51,7 @@ class PycodeSimilarService(AntiplagBaseService):
 
     def _get_percent_from_pycode_candidate(
         self,
-        referenced_code: str,
+        reference_code: str,
         candidate_code: str
     ) -> float:
 
@@ -61,12 +61,15 @@ class PycodeSimilarService(AntiplagBaseService):
         возвращает полученный процент плагиата. """
 
         pycheck = pycode.detect(
-            [referenced_code, candidate_code],
+            [reference_code, candidate_code],
             diff_method=pycode.UnifiedDiff,
             keep_prints=True,
             module_level=True)
-        pycheck_data = pycheck[0][1].pop(0)
-        pycheck_plag_percent = self._get_value_from_pycode_output(pycheck_data)
+        pycheck_data_extracted = pycheck[0][1]
+        pycheck_data_processed = pycheck_data_extracted.pop()
+        pycheck_plag_percent = self._get_value_from_pycode_output(
+            pycheck_data_processed
+        )
         return pycheck_plag_percent
 
     def _check_plagiarism(self, data: CheckInput) -> CheckResult:
@@ -82,14 +85,10 @@ class PycodeSimilarService(AntiplagBaseService):
         for candidate in candidate_info:
             candidate_code = candidate['code']
             candidate_uuid = candidate['uuid']
-            # TODO Когда в функция принимает больше одного аргумента
-            #  - используй именованные аргументы. Это нужно для гибкости кода.
-            #  Если автор функции добавит новые аргументы
-            #  или изменит порядок существующих - твой код не сломается, только
-            #  если аргументы именованные.
             plag_percent = self._get_percent_from_pycode_candidate(
-                ref_code,
-                candidate_code) # TODO Закрывающая скобка всегда на новой строке
+                reference_code=ref_code,
+                candidate_code=candidate_code
+            )
             plag_percent_by_uuids[candidate_uuid] = plag_percent
         return self._get_candidate_with_max_plag(plag_percent_by_uuids)
 
