@@ -7,7 +7,6 @@ class Lang:
     JAVA = 'java'
 
     SIM_LANGS = CPP, JAVA
-    PYCODE_LANGS = PYTHON
 
     CHOICES = (
         (CPP, CPP),

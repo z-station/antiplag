@@ -9,7 +9,7 @@ from marshmallow.decorators import (
     post_load,
 )
 from app.service.entities import (
-    Candidates,
+    Candidate,
     CheckInput,
 )
 
@@ -20,15 +20,15 @@ class CandidateSchema(Schema):
     code = String(required=True, load_only=True)
 
     @post_load
-    def make_candidate_data(self, data, **kwargs) -> Candidates:
-        return Candidates(**data)
+    def make_candidate_data(self, data, **kwargs) -> Candidate:
+        return Candidate(**data)
 
 
 class CheckSchema(Schema):
 
     lang = String(required=True, load_only=True)
     ref_code = String(required=True, load_only=True)
-    candidate_info = Nested(CandidateSchema, many=True, required=True)
+    candidates = Nested(CandidateSchema, many=True, required=True)
 
     uuid = Integer(dump_only=True)
     percent = Float(dump_only=True)

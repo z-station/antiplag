@@ -5,9 +5,9 @@ from typing import (
 )
 
 
-class Candidates(TypedDict):
+class Candidate(TypedDict):
 
-    """ Содержит данные о кандидатах сравнения """
+    """ Содержит данные о кандидате сравнения """
 
     uuid: str
     code: str
@@ -19,12 +19,12 @@ class CheckInput(TypedDict):
 
     lang: str
     ref_code: str
-    candidate_info: List[Candidates]
+    candidates: List[Candidate]
 
 
 class CheckResult(TypedDict):
 
     """ Описывает формат результата сравнения файлов """
 
-    uuid: Union[int, None]
+    uuid: Union[str, None]
     percent: float

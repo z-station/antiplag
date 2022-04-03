@@ -1,9 +1,9 @@
 from app.service.entities import (
-    Candidates,
+    Candidate,
+    # TODO Сломанный импорт
     RequestPlag,
     ResponsePlag
 )
-from app.service.exceptions import ServiceException
 
 
 class TestAPI:
@@ -13,7 +13,7 @@ class TestAPI:
         request_data = {
             "lang": "some lang",
             "ref_code": "some code",
-            "candidate_info": [
+            "candidates": [
                 {
                     "uuid": 1,
                     "code": "another code"
@@ -32,16 +32,16 @@ class TestAPI:
         serialized_data = RequestPlag(
             lang="python",
             ref_code="some code",
-            candidate_info=[
-                    Candidates(
+            candidates=[
+                    Candidate(
                         uuid=1,
                         code="another code"
                     ),
-                    Candidates(
+                    Candidate(
                         uuid=2,
                         code="some code"
                     ),
-                    Candidates(
+                    Candidate(
                         uuid=3,
                         code='different code'
                     )
@@ -70,7 +70,7 @@ class TestAPI:
     #     request_data = {
     #         "lang": "some lang",
     #         "ref_code": "some code",
-    #         "candidate_info": [
+    #         "candidates": [
     #             {
     #                 "uuid": 1,
     #                 "code": "another code"

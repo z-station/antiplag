@@ -7,7 +7,7 @@ from pycode_similar import FuncDiffInfo
 
 from app.service.enums import Lang
 from app.service.entities import (
-    Candidates,
+    Candidate,
     CheckInput,
     CheckResult
 )
@@ -78,11 +78,11 @@ class PycodeSimilarService(AntiplagBaseService):
         поддерживаемых детектором Pycode_similar (Python). """
 
         ref_code: str = data['ref_code']
-        candidate_info: List[Candidates] = data['candidate_info']
+        candidates: List[Candidate] = data['candidates']
 
         plag_percent_by_uuids = {}
 
-        for candidate in candidate_info:
+        for candidate in candidates:
             candidate_code = candidate['code']
             candidate_uuid = candidate['uuid']
             plag_percent = self._get_percent_from_pycode_candidate(
@@ -122,7 +122,7 @@ class SimService(AntiplagBaseService):
 
         lang: str = data['lang']
         ref_code: str = data['ref_code']
-        candidate_info: List[Candidates] = data['candidate_info']
+        candidates: List[Candidate] = data['candidates']
 
         checker_module_name = 'sim_c++' if lang == Lang.CPP else 'sim_java'
         checker_command = f'/usr/bin/{checker_module_name} -r4 -s -p'
@@ -131,7 +131,7 @@ class SimService(AntiplagBaseService):
         reference_path = reference_file.filepath
 
         plag_percent_by_uuids = {}
-        for candidate in candidate_info:
+        for candidate in candidates:
             candidate_code_file = PlagFile(code=candidate['code'], lang=lang)
             candidate_path = candidate_code_file.filepath
             sim_cmd = subprocess.getoutput(
