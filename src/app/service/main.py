@@ -12,6 +12,8 @@ from app.service.entities import (
     CheckResult
 )
 from app.service.utils import PlagFile
+from app.service import exceptions
+from app.service import messages
 
 
 class AntiplagBaseService(ABC):
@@ -24,13 +26,17 @@ class AntiplagBaseService(ABC):
 
         """ Возвращает кандидата с максимальным процентом заимствований. """
 
-        max_value_key = max(plag_dict, key=plag_dict.get)
-        max_value = plag_dict[max_value_key]
-        uuid = None if max_value == 0 else max_value_key
-        return CheckResult(
-            uuid=uuid,
-            percent=max_value
-        )
+        try:
+            max_value_key = max(plag_dict, key=plag_dict.get)
+            max_value = plag_dict[max_value_key]
+            uuid = None if max_value == 0 else max_value_key
+        except ValueError as ex:
+            raise exceptions.CandidatesException(details=str(ex))
+        else:
+            return CheckResult(
+                uuid=uuid,
+                percent=max_value
+            )
 
 
 class PycodeSimilarService(AntiplagBaseService):
@@ -45,9 +51,12 @@ class PycodeSimilarService(AntiplagBaseService):
         извлекает из нее вычисленный процент плагиата
         и возвращает его виде вещественного числа. """
 
-        pycode_output_str = str(pycode_output)
-        values = re.findall(r'\d+\.\d+', pycode_output_str)
-        return float(values.pop())
+        try:
+            pycode_output_str = str(pycode_output)
+            values = re.findall(r'\d+\.\d+', pycode_output_str)
+            return float(values.pop())
+        except IndexError as ex:
+            raise exceptions.CandidatesException(details=str(ex))
 
     def _get_percent_from_pycode_candidate(
         self,
@@ -60,17 +69,20 @@ class PycodeSimilarService(AntiplagBaseService):
         (на языкe программирования Python) и
         возвращает полученный процент плагиата. """
 
-        pycheck = pycode.detect(
-            [reference_code, candidate_code],
-            diff_method=pycode.UnifiedDiff,
-            keep_prints=True,
-            module_level=True)
-        pycheck_data_extracted = pycheck[0][1]
-        pycheck_data_processed = pycheck_data_extracted.pop()
-        pycheck_plag_percent = self._get_value_from_pycode_output(
-            pycheck_data_processed
-        )
-        return pycheck_plag_percent
+        try:
+            pycheck = pycode.detect(
+                [reference_code, candidate_code],
+                diff_method=pycode.UnifiedDiff,
+                keep_prints=True,
+                module_level=True)
+            pycheck_data_extracted = pycheck[0][1]
+            pycheck_data_processed = pycheck_data_extracted.pop()
+            pycheck_plag_percent = self._get_value_from_pycode_output(
+                pycheck_data_processed
+            )
+            return pycheck_plag_percent
+        except SyntaxError as ex:
+            raise exceptions.CheckerException(details=str(ex))
 
     def _check_plagiarism(self, data: CheckInput) -> CheckResult:
 
@@ -103,7 +115,6 @@ class SimService(AntiplagBaseService):
         """ Извлекает вычисленный процент плагиата из данных,
         полученных в результате применения детектора SIM,
         и возвращает его в виде вещественного числа. """
-
         if '%' in sim_console_output:
             percent_char_index = sim_console_output.find('%')
             value_fragment = sim_console_output[
@@ -134,13 +145,18 @@ class SimService(AntiplagBaseService):
         for candidate in candidates:
             candidate_code_file = PlagFile(code=candidate['code'], lang=lang)
             candidate_path = candidate_code_file.filepath
-            sim_cmd = subprocess.getoutput(
-                cmd=f'{checker_command} {reference_path} {candidate_path}'
-            )
-            plag_percent = self._get_value_from_sim_console_output(sim_cmd)
-            candidate_uuid = candidate['uuid']
-            plag_percent_by_uuids[candidate_uuid] = plag_percent
-            candidate_code_file.remove()
+            try:
+                sim_cmd = subprocess.getoutput(
+                    cmd=f'{checker_command} {reference_path} {candidate_path}'
+                )
+            except subprocess.SubprocessError:
+                raise exceptions.SimSubprocessException(messages.MSG_4)
+            else:
+                plag_percent = self._get_value_from_sim_console_output(sim_cmd)
+                candidate_uuid = candidate['uuid']
+                plag_percent_by_uuids[candidate_uuid] = plag_percent
+            finally:
+                candidate_code_file.remove()
         reference_file.remove()
         return self._get_candidate_with_max_plag(plag_percent_by_uuids)
 
@@ -155,7 +171,9 @@ class AntiplagService:
 
         if lang in Lang.SIM_LANGS:
             service = SimService()
-        else:
+        elif lang == Lang.PYTHON:
             service = PycodeSimilarService()
+        else:
+            raise exceptions.LanguageException(details=messages.MSG_5)
 
         return service._check_plagiarism(data)

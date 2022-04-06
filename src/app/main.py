@@ -10,12 +10,20 @@ from app.service.entities import (
     CheckResult,
     CheckInput
 )
-from app.schema import CheckSchema
+from app.schema import (
+    BadRequestSchema,
+    CheckSchema
+)
+from app.service.exceptions import ServiceException
 
 
 def create_app():
 
     app = Flask(__name__)
+
+    @app.errorhandler(400)
+    def bad_request_handler(ex: Exception):
+        return BadRequestSchema().dump(ex), 400
 
     @app.route('/', methods=['get'])
     def index():
@@ -31,7 +39,7 @@ def create_app():
             data = service.check(
                 data=schema.load(request_data)
             )
-        except ValidationError as ex:
+        except (ServiceException, ValidationError) as ex:
             abort(400, ex)
         else:
             return schema.dump(data)
