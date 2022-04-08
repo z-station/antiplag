@@ -145,18 +145,13 @@ class SimService(AntiplagBaseService):
         for candidate in candidates:
             candidate_code_file = PlagFile(code=candidate['code'], lang=lang)
             candidate_path = candidate_code_file.filepath
-            try:
-                sim_cmd = subprocess.getoutput(
-                    cmd=f'{checker_command} {reference_path} {candidate_path}'
-                )
-            except subprocess.SubprocessError:
-                raise exceptions.SimSubprocessException(messages.MSG_4)
-            else:
-                plag_percent = self._get_value_from_sim_console_output(sim_cmd)
-                candidate_uuid = candidate['uuid']
-                plag_percent_by_uuids[candidate_uuid] = plag_percent
-            finally:
-                candidate_code_file.remove()
+            sim_cmd = subprocess.getoutput(
+                cmd=f'{checker_command} {reference_path} {candidate_path}'
+            )
+            plag_percent = self._get_value_from_sim_console_output(sim_cmd)
+            candidate_uuid = candidate['uuid']
+            plag_percent_by_uuids[candidate_uuid] = plag_percent
+            candidate_code_file.remove()
         reference_file.remove()
         return self._get_candidate_with_max_plag(plag_percent_by_uuids)
 
@@ -174,6 +169,6 @@ class AntiplagService:
         elif lang == Lang.PYTHON:
             service = PycodeSimilarService()
         else:
-            raise exceptions.LanguageException(details=messages.MSG_5)
+            raise exceptions.LanguageException(details=messages.MSG_4)
 
         return service._check_plagiarism(data)

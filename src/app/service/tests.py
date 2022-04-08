@@ -32,12 +32,17 @@ class TestAntiplagBaseService:
         }
 
         check_result = CheckResult(
-            uuid='9asd2!2',
+            uuid='9asd2',
             percent=50.9
         )
 
-        service = mocker.Mock(spec=AntiplagBaseService)
-        service._get_candidate_with_max_plag.return_value = check_result
+        mocker.patch.object(
+            AntiplagBaseService,
+            '__abstractmethods__',
+            new_callable=set
+        )
+
+        service = AntiplagBaseService()
 
         # act
         result = service._get_candidate_with_max_plag(
@@ -53,19 +58,20 @@ class TestAntiplagBaseService:
     ):
 
         # arrange
-        check_input = {
-            '1dfa1': 10.2,
-            '53a75': 7.24,
-            '9asd2': 50.9
-        }
+        check_input = {'9asd2': 0}
 
         check_result = CheckResult(
             uuid=None,
             percent=0
         )
 
-        service = mocker.Mock(spec=AntiplagBaseService)
-        service._get_candidate_with_max_plag.return_value = check_result
+        mocker.patch.object(
+            AntiplagBaseService,
+            '__abstractmethods__',
+            new_callable=set
+        )
+
+        service = AntiplagBaseService()
 
         # act
         result = service._get_candidate_with_max_plag(
@@ -73,27 +79,29 @@ class TestAntiplagBaseService:
         )
 
         # assert
-        assert result == check_result    
+        assert result == check_result
 
-    def test_get_candidate_with_max_plag__return_candidate__raise_exception(
+    def test_get_candidate_with_max_plag__no_candidates__raise_exception(
         self,
         mocker
     ):
 
-        pass
+        # arrange
+        check_input = {}
 
-        # # arrange
-        # check_input = {}
+        mocker.patch.object(
+            AntiplagBaseService,
+            '__abstractmethods__',
+            new_callable=set
+        )
 
-        # service = mocker.Mock(spec=AntiplagBaseService)
+        service = AntiplagBaseService()
 
-        # # act
-        # with pytest.raises(exceptions.CandidatesException) as ex:
-        #     service._get_candidate_with_max_plag(
-        #         pycode_output=check_input
-        #     )
+        # act
+        with pytest.raises(exceptions.CandidatesException) as ex:
+            service._get_candidate_with_max_plag(check_input)
 
-        # assert ex.value.message == messages.MSG_3
+        assert ex.value.message == messages.MSG_3
 
 
 class TestPycodeSimilarService:
@@ -102,7 +110,6 @@ class TestPycodeSimilarService:
 
         # arrange
         check_input = '35.42: ref __main__<1:0>, candidate __main__<1:0>'
-
         check_result = 35.42
 
         service = PycodeSimilarService()
@@ -177,7 +184,7 @@ class TestPycodeSimilarService:
             value_from_pycode_output
         )
 
-        assert result == check_result
+        assert result == 55.19
 
     def test_get_percent_from_pycode_candidate__syntax_error__raise_exception(
         self
@@ -217,6 +224,8 @@ class TestPycodeSimilarService:
             percent=50.9
         )
 
+        pycode_plag_dict = {'9asd2': 50.9}
+
         get_percent_from_pycode_candidate_mock = mocker.patch(
             'app.service.main.PycodeSimilarService._get_percent_from_pycode_candidate',
             return_value=50.9
@@ -238,7 +247,7 @@ class TestPycodeSimilarService:
             candidate_code='some code'
         )
         get_candidate_with_max_plag_mock.assert_called_once_with(
-            {'9asd2': 50.9}
+            pycode_plag_dict
         )
 
         assert result == check_result
@@ -246,42 +255,42 @@ class TestPycodeSimilarService:
 
 class TestSimService:
 
-    def get_value_from_sim_console_output__return_value__ok(self):
+    def test_get_value_from_sim_console_output__return_value__ok(self):
 
         # arrange
-        sim_console_output = 'a1.cpp consists for 62 %_ of b2.cpp material'
+        check_input = 'a1.cpp consists for 62 %_ of b2.cpp material'
 
         check_result = 0.62
 
-        service = AntiplagService()
+        service = SimService()
 
         # act
         result = service._get_value_from_sim_console_output(
-            sim_console_output=sim_console_output
+            sim_console_output=check_input
         )
 
         # assert
         assert result == check_result
 
-    def get_value_from_sim_console_output__no_percent_in_console_output__zero_result(self):
+    def test_get_value_from_sim_console_output__no_percent_symbol__zero_result(
+        self
+    ):
 
-        pass
+        # arrange
+        check_input = 'some console output'
 
-        # # arrange
-        # sim_console_output = 'some result'
+        service = SimService()
 
-        # service = AntiplagService()
+        # act
+        result = service._get_value_from_sim_console_output(
+            sim_console_output=check_input
+        )
 
-        # # act
-        # result = service._get_value_from_sim_console_output(
-        #     sim_console_output=sim_console_output
-        # )
-
-        # # assert
-        # assert result == 0
+        # assert
+        assert result == 0
 
     @pytest.mark.parametrize('lang', Lang.SIM_LANGS)
-    def check_plagiarism__check_plagiarism__ok(
+    def test_check_plagiarism__check_plagiarism__ok(
         self,
         lang,
         mocker
@@ -302,20 +311,14 @@ class TestSimService:
             percent=50.9
         )
 
-        sim_cmd_value = 'a1.cpp consists for 62 %_ of b2.cpp material'
+        sim_plag_dict = {'9asd2': 50.9}
+        sim_cmd_output = 'some console output'
 
-        plagfile_mock = mocker.patch(
-            'app.service.utils.PlagFile'
-        )
-        plagfile_mock.return_value.filepath.return_value = 'some path'
-    
-        sim_subprocces_getoutput_mock = mocker.patch(
-            'subprocess.getoutput',
-            return_value=sim_cmd_value
-        )
+        mocker.patch('app.service.utils.PlagFile')
+        mocker.patch('subprocess.getoutput', return_value=sim_cmd_output)
 
         get_value_from_sim_console_output_mock = mocker.patch(
-            'app.service.main.PycodeSimilarService._get_value_from_sim_console_output',
+            'app.service.main.SimService._get_value_from_sim_console_output',
             return_value=50.9
         )
 
@@ -330,15 +333,12 @@ class TestSimService:
         result = service._check_plagiarism(data=check_input)
 
         # assert
-        sim_subprocces_getoutput_mock.assert_called_once_with(
-            '/usr/bin/sim_c++ -r4 -s -p a1.cpp a2.cpp'
-        )
         get_value_from_sim_console_output_mock.assert_called_once_with(
-            sim_cmd_value
+            sim_cmd_output
         )
 
         get_candidate_with_max_plag_mock.assert_called_once_with(
-            {'9asd2': 50.9}
+            sim_plag_dict
         )
 
         assert result == check_result

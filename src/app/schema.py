@@ -19,7 +19,7 @@ from app.service.exceptions import ServiceException
 
 class CandidateSchema(Schema):
 
-    uuid = Integer(required=True, load_only=True)
+    uuid = String(required=True, load_only=True)
     code = String(required=True, load_only=True)
 
     @post_load
@@ -33,7 +33,7 @@ class CheckSchema(Schema):
     ref_code = String(required=True, load_only=True)
     candidates = Nested(CandidateSchema, many=True, required=True)
 
-    uuid = Integer(dump_only=True)
+    uuid = String(dump_only=True)
     percent = Float(dump_only=True)
 
     @post_load

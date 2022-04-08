@@ -5,7 +5,7 @@ import pytest
 @pytest.fixture()
 def app():
     app = create_app()
-    app.config.update({"CHECK": True})
+    app.config.update({"TESTING": True})
     yield app
 
 

@@ -12,7 +12,7 @@ class ServiceException(Exception):
         details: Optional[Any] = None
     ):
         self.message = message or self.default_message
-        self.details = details or self.default_details
+        self.details = details
         super().__init__(self.message)
 
 
@@ -30,7 +30,3 @@ class CandidatesException(ServiceException):
 
     default_message = messages.MSG_3
 
-
-class SimSubprocessException(ServiceException):
-
-    default_message = messages.MSG_4
