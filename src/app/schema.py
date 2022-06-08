@@ -19,7 +19,7 @@ from app.service.exceptions import ServiceException
 
 class CandidateSchema(Schema):
 
-    uuid = String(required=True, load_only=True)
+    uuid = Integer(required=True, load_only=True)
     code = String(required=True, load_only=True)
 
     @post_load
@@ -33,7 +33,7 @@ class CheckSchema(Schema):
     ref_code = String(required=True, load_only=True)
     candidates = Nested(CandidateSchema, many=True, required=True)
 
-    uuid = String(dump_only=True)
+    uuid = Integer(dump_only=True)
     percent = Float(dump_only=True)
 
     @post_load
@@ -47,21 +47,19 @@ class BadRequestSchema(Schema):
     details = Method('dump_details')
 
     def dump_error(self, obj):
-
-        ex = obj.description
-        if isinstance(ex, ServiceException):
-            return ex.message
-        elif isinstance(ex, ValidationError):
-            return 'Validation Error'
-        else:
-            return 'Internal Error'
+        return 'Validation Error'
 
     def dump_details(self, obj):
+        return obj.description.messages
 
-        ex = obj.description
-        if isinstance(ex, ServiceException):
-            return ex.details
-        elif isinstance(ex, ValidationError):
-            return ex.messages
-        else:
-            return str(ex)
+
+class ServiceExceptionSchema(Schema):
+
+    error = Method('dump_error')
+    details = Method('dump_details')
+
+    def dump_error(self, obj):
+        return obj.description.message
+
+    def dump_details(self, obj):
+        return obj.description.details
