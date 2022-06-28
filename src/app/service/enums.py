@@ -1,3 +1,5 @@
+
+
 class Lang:
 
     """ Содержит языковые константы. """
@@ -13,3 +15,5 @@ class Lang:
         (PYTHON, PYTHON),
         (JAVA, JAVA)
     )
+
+    VALUES = (CPP, JAVA, PYTHON)

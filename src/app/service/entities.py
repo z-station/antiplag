@@ -1,7 +1,7 @@
 from typing_extensions import TypedDict
 from typing import (
     List,
-    Union
+    Optional
 )
 
 
@@ -26,5 +26,5 @@ class CheckResult(TypedDict):
 
     """ Описывает формат результата сравнения файлов """
 
-    uuid: Union[str, None]
+    uuid: Optional[str]
     percent: float

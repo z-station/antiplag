@@ -7,4 +7,4 @@ RUN apt-get update && \
     pip install pipenv
 
 COPY ./src/Pipfile ./src/Pipfile.lock /tmp/
-RUN cd /tmp && pipenv install --deploy --system
+RUN cd /tmp && pipenv install --deploy --dev --system

@@ -30,3 +30,7 @@ class CandidatesException(ServiceException):
 
     default_message = messages.MSG_3
 
+
+class ParsingOutputException(ServiceException):
+
+    default_message = messages.MSG_4

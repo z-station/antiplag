@@ -3,7 +3,6 @@ import subprocess
 import re
 from abc import ABC, abstractmethod
 from typing import List
-from pycode_similar import FuncDiffInfo
 
 from app.service.enums import Lang
 from app.service.entities import (
@@ -13,13 +12,12 @@ from app.service.entities import (
 )
 from app.service.utils import PlagFile
 from app.service import exceptions
-from app.service import messages
 
 
 class AntiplagBaseService(ABC):
 
     @abstractmethod
-    def _check_plagiarism(self, data: CheckInput) -> CheckResult:
+    def check_plagiarism(self, data: CheckInput) -> CheckResult:
         pass
 
     def _get_candidate_with_max_plag(self, plag_dict: dict) -> CheckResult:
@@ -30,7 +28,7 @@ class AntiplagBaseService(ABC):
             max_value_key = max(plag_dict, key=plag_dict.get)
             max_value = plag_dict[max_value_key]
             uuid = None if max_value == 0 else max_value_key
-        except ValueError as ex:
+        except (ValueError, TypeError) as ex:
             raise exceptions.CandidatesException(details=str(ex))
         else:
             return CheckResult(
@@ -41,14 +39,9 @@ class AntiplagBaseService(ABC):
 
 class PycodeSimilarService(AntiplagBaseService):
 
-    def _get_value_from_pycode_output(
-        self,
-        pycode_output: FuncDiffInfo
-    ) -> float:
+    def _get_value_from_pycode_output(self, pycode_output: str) -> float:
 
-        """ Преобразует полученный в результате
-        применения Pycode_similar объект в строку,
-        извлекает из нее вычисленный процент плагиата
+        """ Ивлекает из строки вычисленный процент плагиата
         и возвращает его виде вещественного числа. """
 
         try:
@@ -56,7 +49,7 @@ class PycodeSimilarService(AntiplagBaseService):
             values = re.findall(r'\d+\.\d+', pycode_output_str)
             return float(values.pop())
         except IndexError as ex:
-            raise exceptions.CandidatesException(details=str(ex))
+            raise exceptions.ParsingOutputException(details=str(ex))
 
     def _get_percent_from_pycode_candidate(
         self,
@@ -70,21 +63,23 @@ class PycodeSimilarService(AntiplagBaseService):
         возвращает полученный процент плагиата. """
 
         try:
-            pycheck = pycode.detect(
-                [reference_code, candidate_code],
+            pycode_result = pycode.detect(
+                (reference_code, candidate_code),
                 diff_method=pycode.UnifiedDiff,
                 keep_prints=True,
-                module_level=True)
-            pycheck_data_extracted = pycheck[0][1]
-            pycheck_data_processed = pycheck_data_extracted.pop()
+                module_level=True
+            )
+            pycode_output_obj = pycode_result[0][1]
+            pycode_output = str(pycode_output_obj.pop())
+        except (SyntaxError, IndexError) as ex:
+            raise exceptions.CheckerException(details=str(ex))
+        else:
             pycheck_plag_percent = self._get_value_from_pycode_output(
-                pycheck_data_processed
+                pycode_output
             )
             return pycheck_plag_percent
-        except SyntaxError as ex:
-            raise exceptions.CheckerException(details=str(ex))
 
-    def _check_plagiarism(self, data: CheckInput) -> CheckResult:
+    def check_plagiarism(self, data: CheckInput) -> CheckResult:
 
         """ Проверка на плагиат исходного кода задач на языках,
         поддерживаемых детектором Pycode_similar (Python). """
@@ -115,18 +110,23 @@ class SimService(AntiplagBaseService):
         """ Извлекает вычисленный процент плагиата из данных,
         полученных в результате применения детектора SIM,
         и возвращает его в виде вещественного числа. """
-        if '%' in sim_console_output:
-            percent_char_index = sim_console_output.find('%')
-            value_fragment = sim_console_output[
-                percent_char_index-4: percent_char_index
-            ]
-            str_value = re.findall(r'\b\d+\b', value_fragment)[-1]
-            result = int(str_value)/100
-        else:
-            result = 0
-        return result
 
-    def _check_plagiarism(self, data: CheckInput) -> CheckResult:
+        try:
+            if '%' in sim_console_output:
+                percent_char_index = sim_console_output.find('%')
+                value_fragment = sim_console_output[
+                    percent_char_index-4: percent_char_index
+                ]
+                str_value = re.findall(r'\b\d+\b', value_fragment)[-1]
+                result = int(str_value)/100
+            else:
+                result = 0
+        except (IndexError, ValueError) as ex:
+            raise exceptions.ParsingOutputException(details=str(ex))
+        else:
+            return result
+
+    def check_plagiarism(self, data: CheckInput) -> CheckResult:
 
         """ Проверка на плагиат исходного кода задач на языках,
         поддерживаемых детектором SIM (C++, Java). """
@@ -169,6 +169,6 @@ class AntiplagService:
         elif lang == Lang.PYTHON:
             service = PycodeSimilarService()
         else:
-            raise exceptions.LanguageException(details=messages.MSG_4)
+            raise exceptions.LanguageException()
+        return service.check_plagiarism(data)
 
-        return service._check_plagiarism(data)

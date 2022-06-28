@@ -1,4 +1,4 @@
-from marshmallow import Schema, ValidationError
+from marshmallow import Schema, validate
 from marshmallow.fields import (
     Nested,
     Integer,
@@ -13,13 +13,12 @@ from app.service.entities import (
     Candidate,
     CheckInput,
 )
-
-from app.service.exceptions import ServiceException
+from app.service.enums import Lang
 
 
 class CandidateSchema(Schema):
 
-    uuid = Integer(required=True, load_only=True)
+    uuid = String(required=True, load_only=True)
     code = String(required=True, load_only=True)
 
     @post_load
@@ -29,11 +28,15 @@ class CandidateSchema(Schema):
 
 class CheckSchema(Schema):
 
-    lang = String(required=True, load_only=True)
+    lang = String(
+        load_only=True,
+        required=True,
+        validate=validate.OneOf(Lang.VALUES)
+    )
     ref_code = String(required=True, load_only=True)
     candidates = Nested(CandidateSchema, many=True, required=True)
 
-    uuid = Integer(dump_only=True)
+    uuid = String(dump_only=True)
     percent = Float(dump_only=True)
 
     @post_load
