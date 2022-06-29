@@ -10,6 +10,8 @@ services:
     image: cappa-antiplag
     volumes:
       - ../src:/app/src
+    networks:
+      - localhost
     ports:
       - "9020:9020"
     restart: on-failure
