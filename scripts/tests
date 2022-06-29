@@ -1,2 +1,2 @@
 #!/bin/bash
-docker exec -it cappa-antiplag pytest -vv -p no:cacheprovider /app/src/
+docker exec -it antiplag pytest -vv -p no:cacheprovider /app/src/

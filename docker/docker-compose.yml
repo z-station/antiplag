@@ -2,12 +2,12 @@ version: "3.3"
 
 services:
 
-  cappa-antiplag:
+  antiplag:
     build:
       context: ..
       dockerfile: ./docker/Dockerfile
-    container_name: cappa-antiplag
-    image: cappa-antiplag
+    container_name: antiplag
+    image: antiplag
     volumes:
       - ../src:/app/src
     networks:
