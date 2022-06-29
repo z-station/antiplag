@@ -60,7 +60,11 @@ class PycodeSimilarService(AntiplagBaseService):
         """ Осуществляет проверку на наличие плагиата
         в решении очередного кандидата для сравнения
         (на языкe программирования Python) и
-        возвращает полученный процент плагиата. """
+        возвращает полученный процент плагиата.
+
+        Возвращает -1 если бекенд плагиата возвращает ошибку при очередного
+        кандидата. Это означает что проверить плагиат невозможно.
+        """
 
         try:
             pycode_result = pycode.detect(
@@ -71,8 +75,8 @@ class PycodeSimilarService(AntiplagBaseService):
             )
             pycode_output_obj = pycode_result[0][1]
             pycode_output = str(pycode_output_obj.pop())
-        except (SyntaxError, IndexError) as ex:
-            raise exceptions.CheckerException(details=str(ex))
+        except (SyntaxError, IndexError):
+            return -1
         else:
             pycheck_plag_percent = self._get_value_from_pycode_output(
                 pycode_output

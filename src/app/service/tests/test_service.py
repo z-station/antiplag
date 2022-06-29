@@ -15,7 +15,6 @@ from app.service.entities import (
 
 from app.service.exceptions import (
     CandidatesException,
-    CheckerException,
     LanguageException,
     ParsingOutputException
 )
@@ -184,7 +183,7 @@ class TestPycodeSimilarService:
         )
         assert result == check_result
 
-    def test_get_percent_from_pycode_candidate__pycode_error__raise_exception(
+    def test_get_percent_from_pycode_candidate__pycode_error__ok(
         self,
         mocker
     ):
@@ -203,15 +202,13 @@ class TestPycodeSimilarService:
             '._get_value_from_pycode_output'
         )
         # act
-        with pytest.raises(CheckerException) as ex:
-            PycodeSimilarService()._get_percent_from_pycode_candidate(
-                reference_code=reference_code,
-                candidate_code=candidate_code
-            )
+        result = PycodeSimilarService()._get_percent_from_pycode_candidate(
+            reference_code=reference_code,
+            candidate_code=candidate_code
+        )
 
         # assert
-        assert ex.value.message == messages.MSG_1
-        assert ex.value.details == error_msg
+        assert result == -1
         pycode_detect_mock.assert_called_once_with(
             (reference_code, candidate_code),
             diff_method=pycode_similar.UnifiedDiff,
