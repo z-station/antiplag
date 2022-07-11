@@ -62,8 +62,9 @@ class PycodeSimilarService(AntiplagBaseService):
         (на языкe программирования Python) и
         возвращает полученный процент плагиата.
 
-        Возвращает -1 если бекенд плагиата возвращает ошибку при очередного
-        кандидата. Это означает что проверить плагиат невозможно.
+        Возвращает -1, если бэкенд антиплагиат-сервиса
+        возбудил ошибку при прогоне очередного кандидата.
+        Это означает, что проверка на плагиат невозможна.
         """
 
         try:
@@ -133,13 +134,15 @@ class SimService(AntiplagBaseService):
     def check_plagiarism(self, data: CheckInput) -> CheckResult:
 
         """ Проверка на плагиат исходного кода задач на языках,
-        поддерживаемых детектором SIM (C++, Java). """
+        поддерживаемых детектором SIM (C++, Java, Pascal). """
 
         lang: str = data['lang']
         ref_code: str = data['ref_code']
         candidates: List[Candidate] = data['candidates']
 
-        checker_module_name = 'sim_c++' if lang == Lang.CPP else 'sim_java'
+        checker_module_name = 'sim_c++' if lang == Lang.CPP else (
+            'sim_java' if lang == Lang.JAVA else 'sim_pasc'
+        )
         checker_command = f'/usr/bin/{checker_module_name} -r4 -s -p'
 
         reference_file = PlagFile(code=ref_code, lang=lang)
@@ -175,4 +178,3 @@ class AntiplagService:
         else:
             raise exceptions.LanguageException()
         return service.check_plagiarism(data)
-

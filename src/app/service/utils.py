@@ -1,6 +1,5 @@
 import os
 import uuid
-
 from app.service.enums import Lang
 from app.config import TEMP_DIR
 
@@ -15,6 +14,8 @@ class PlagFile:
             self.filename = f'{uuid.uuid4()}.cpp'
         elif lang == Lang.JAVA:
             self.filename = f'{uuid.uuid4()}.java'
+        elif lang == Lang.PASCAL:
+            self.filename = f'{uuid.uuid4()}.pas'
         self.filepath = os.path.join(TEMP_DIR, self.filename)
         with open(self.filepath, 'w') as file:
             file.write(code)
