@@ -7,13 +7,15 @@ class Lang:
     CPP = 'cpp'
     PYTHON = 'python'
     JAVA = 'java'
+    SQL = 'sql'
 
     SIM_LANGS = CPP, JAVA
 
     CHOICES = (
         (CPP, CPP),
         (PYTHON, PYTHON),
-        (JAVA, JAVA)
+        (JAVA, JAVA),
+        (SQL, SQL)
     )
 
-    VALUES = (CPP, JAVA, PYTHON)
+    VALUES = (CPP, JAVA, PYTHON, SQL)

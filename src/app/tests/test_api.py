@@ -3,7 +3,8 @@ from app.service.entities import (
     CheckInput,
     CheckResult
 )
-from app.service.exceptions import ServiceException
+from app.service.exceptions import ServiceException, UnsupportedQueryException
+from app.service import messages
 from app.service.enums import Lang
 
 
@@ -146,6 +147,83 @@ def test_check__not_allowed_lang__bad_request(
     assert response.content_type == 'application/json'
     assert response.json['error'] == 'Validation Error'
     assert response.json['details'] == {
-        'lang': ['Must be one of: cpp, java, python.']
+        'lang': ['Must be one of: cpp, java, python, sql.']
     }
     service_mock.assert_not_called()
+
+
+def test_check__sql_lang__ok(client, mocker):
+
+    # arrange
+    check_result = CheckResult(
+        uuid='candidate-1',
+        percent=0.85
+    )
+
+    check_mock = mocker.patch(
+        'app.service.main.AntiplagService.check',
+        return_value=check_result
+    )
+
+    # act
+    response = client.post(
+        path='/check/',
+        json={
+            "lang": Lang.SQL,
+            "ref_code": "SELECT id FROM users",
+            "candidates": [
+                {
+                    "uuid": 'candidate-1',
+                    "code": "SELECT id, name FROM users"
+                },
+            ]
+        }
+    )
+
+    # assert
+    assert response.status_code == 200
+    assert response.content_type == 'application/json'
+    assert response.json['uuid'] == check_result['uuid']
+    assert response.json['percent'] == check_result['percent']
+    check_mock.assert_called_once_with(
+        data=CheckInput(
+            lang=Lang.SQL,
+            ref_code="SELECT id FROM users",
+            candidates=[
+                Candidate(
+                    uuid='candidate-1',
+                    code="SELECT id, name FROM users"
+                )
+            ]
+        )
+    )
+
+
+def test_check__unsupported_sql_query__internal_error(client, mocker):
+
+    # arrange
+    mocker.patch(
+        'app.service.main.AntiplagService.check',
+        side_effect=UnsupportedQueryException()
+    )
+
+    # act
+    response = client.post(
+        path='/check/',
+        json={
+            "lang": Lang.SQL,
+            "ref_code": "INSERT INTO users VALUES (1)",
+            "candidates": [
+                {
+                    "uuid": 'candidate-1',
+                    "code": "INSERT INTO users VALUES (2)"
+                }
+            ]
+        }
+    )
+
+    # assert
+    assert response.status_code == 500
+    assert response.content_type == 'application/json'
+    assert response.json['error'] == messages.MSG_5
+    assert response.json['details'] is None

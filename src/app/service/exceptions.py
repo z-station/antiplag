@@ -29,3 +29,8 @@ class CandidatesException(ServiceException):
 class ParsingOutputException(ServiceException):
 
     default_message = messages.MSG_4
+
+
+class UnsupportedQueryException(ServiceException):
+
+    default_message = messages.MSG_5

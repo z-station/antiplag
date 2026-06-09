@@ -4,7 +4,8 @@ from app.service.main import (
     AntiplagService,
     AntiplagBaseService,
     PycodeSimilarService,
-    SimService
+    SimService,
+    SqlPlagService
 )
 from app.service.enums import Lang
 from app.service.entities import (
@@ -16,7 +17,8 @@ from app.service.entities import (
 from app.service.exceptions import (
     CandidatesException,
     LanguageException,
-    ParsingOutputException
+    ParsingOutputException,
+    UnsupportedQueryException
 )
 from app.service import messages
 
@@ -374,6 +376,110 @@ class TestSimService:
         assert result == check_result
 
 
+class TestSqlPlagService:
+
+    def test_check_plagiarism__select_queries__ok(self, mocker):
+        test_data = CheckInput(
+            lang=Lang.SQL,
+            ref_code='SELECT 1',
+            candidates=[
+                Candidate(uuid='candidate-1', code='SELECT 2'),
+            ]
+        )
+
+        mock_sql_plag = mocker.MagicMock()
+        mock_sql_plag.similarity_percentage.return_value = 90
+        mocker.patch('cappa_sqlplag.SQLPlag', return_value=mock_sql_plag)
+
+        service = SqlPlagService()
+        result = service.check_plagiarism(test_data)
+
+        assert result == CheckResult(uuid='candidate-1', percent=0.90)
+        mock_sql_plag.similarity_percentage.assert_called_once()
+
+    def test_check_plagiarism__cte_queries__ok(self, mocker):
+        test_data = CheckInput(
+            lang=Lang.SQL,
+            ref_code='WITH t AS (SELECT 1) SELECT * FROM t',
+            candidates=[
+                Candidate(
+                    uuid='candidate-1',
+                    code='WITH t AS (SELECT 2) SELECT * FROM t'
+                ),
+            ]
+        )
+
+        mock_sql_plag = mocker.MagicMock()
+        mock_sql_plag.cte_similarity_percentage.return_value = 80
+        mocker.patch('cappa_sqlplag.SQLPlag', return_value=mock_sql_plag)
+
+        service = SqlPlagService()
+        result = service.check_plagiarism(test_data)
+
+        assert result == CheckResult(uuid='candidate-1', percent=0.80)
+        mock_sql_plag.cte_similarity_percentage.assert_called_once()
+
+    def test_check_plagiarism__unsupported_ref_query__raise_exception(self):
+        test_data = CheckInput(
+            lang=Lang.SQL,
+            ref_code='INSERT INTO users VALUES (1)',
+            candidates=[
+                Candidate(
+                    uuid='candidate-1',
+                    code='INSERT INTO users VALUES (2)'
+                ),
+            ]
+        )
+
+        service = SqlPlagService()
+
+        with pytest.raises(UnsupportedQueryException):
+            service.check_plagiarism(test_data)
+
+    def test_check_plagiarism__skip_candidates_with_other_query_type(
+        self,
+        mocker
+    ):
+        test_data = CheckInput(
+            lang=Lang.SQL,
+            ref_code='SELECT 1',
+            candidates=[
+                Candidate(
+                    uuid='candidate-1',
+                    code='WITH t AS (SELECT 1) SELECT * FROM t'
+                ),
+                Candidate(uuid='candidate-2', code='SELECT 2'),
+            ]
+        )
+
+        mock_sql_plag = mocker.MagicMock()
+        mock_sql_plag.similarity_percentage.return_value = 70
+        mocker.patch('cappa_sqlplag.SQLPlag', return_value=mock_sql_plag)
+
+        service = SqlPlagService()
+        result = service.check_plagiarism(test_data)
+
+        assert result == CheckResult(uuid='candidate-2', percent=0.70)
+        mock_sql_plag.similarity_percentage.assert_called_once()
+
+    def test_check_plagiarism__no_matching_candidates__return_zero(self):
+        test_data = CheckInput(
+            lang=Lang.SQL,
+            ref_code='SELECT 1',
+            candidates=[
+                Candidate(
+                    uuid='candidate-1',
+                    code='WITH t AS (SELECT 1) SELECT * FROM t'
+                ),
+            ]
+        )
+
+        service = SqlPlagService()
+        result = service.check_plagiarism(test_data)
+
+        assert result == CheckResult(uuid=None, percent=0.0)
+
+
 class TestAntiplagService:
 
     @pytest.mark.parametrize('lang', Lang.SIM_LANGS)
@@ -426,6 +532,36 @@ class TestAntiplagService:
         )
         check_plagiarism_mock = mocker.patch(
             'app.service.main.PycodeSimilarService.check_plagiarism',
+            return_value=check_result
+        )
+        service = AntiplagService()
+
+        # act
+        result = service.check(data=check_input)
+
+        # assert
+        check_plagiarism_mock.assert_called_once_with(check_input)
+        assert result == check_result
+
+    def test_check__call_sql_plag_service__ok(self, mocker):
+
+        # arrange
+        check_input = CheckInput(
+            lang=Lang.SQL,
+            ref_code='SELECT 1',
+            candidates=[
+                Candidate(
+                    uuid='9asd2',
+                    code='SELECT 2'
+                )
+            ]
+        )
+        check_result = CheckResult(
+            uuid='9asd2',
+            percent=0.7
+        )
+        check_plagiarism_mock = mocker.patch(
+            'app.service.main.SqlPlagService.check_plagiarism',
             return_value=check_result
         )
         service = AntiplagService()
