@@ -1,2 +1,2 @@
 #!/bin/bash
-gunicorn --bind 0:9020 app.main:app --reload -w ${GUNICORN_WORKERS:=1}
+uvicorn app.main:app --host 0.0.0.0 --port 9020 --reload --workers ${UVICORN_WORKERS:=1}

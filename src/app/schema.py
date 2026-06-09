@@ -1,68 +1,64 @@
-from marshmallow import Schema, validate
-from marshmallow.fields import (
-    Nested,
-    Integer,
-    Float,
-    String,
-    Method
-)
-from marshmallow.decorators import (
-    post_load,
-)
-from app.service.entities import (
-    Candidate,
-    CheckInput,
-)
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, field_validator
+
+from app.service.entities import CheckInput
 from app.service.enums import Lang
 
 
-class CandidateSchema(Schema):
-
-    uuid = String(required=True, load_only=True)
-    code = String(required=True, load_only=True)
-
-    @post_load
-    def make_candidate_data(self, data, **kwargs) -> Candidate:
-        return Candidate(**data)
+class CandidateModel(BaseModel):
+    uuid: str
+    code: str
 
 
-class CheckSchema(Schema):
+class CheckRequest(BaseModel):
+    lang: str
+    ref_code: str
+    candidates: list[CandidateModel]
 
-    lang = String(
-        load_only=True,
-        required=True,
-        validate=validate.OneOf(Lang.VALUES)
-    )
-    ref_code = String(required=True, load_only=True)
-    candidates = Nested(CandidateSchema, many=True, required=True)
+    @field_validator('lang')
+    @classmethod
+    def validate_lang(cls, value: str) -> str:
+        if value not in Lang.VALUES:
+            raise ValueError('Must be one of: cpp, java, python, sql.')
+        return value
 
-    uuid = String(dump_only=True)
-    percent = Float(dump_only=True)
-
-    @post_load
-    def make_check_data(self, data, **kwargs) -> CheckInput:
-        return CheckInput(**data)
-
-
-class BadRequestSchema(Schema):
-
-    error = Method('dump_error')
-    details = Method('dump_details')
-
-    def dump_error(self, obj):
-        return 'Validation Error'
-
-    def dump_details(self, obj):
-        return obj.description.messages
+    def to_check_input(self) -> CheckInput:
+        return CheckInput(
+            lang=self.lang,
+            ref_code=self.ref_code,
+            candidates=[
+                {'uuid': candidate.uuid, 'code': candidate.code}
+                for candidate in self.candidates
+            ],
+        )
 
 
-class ServiceExceptionSchema(Schema):
+class CheckResponse(BaseModel):
+    uuid: str | None
+    percent: float
 
-    error = Method('dump_error')
-    details = Method('dump_details')
 
-    def dump_error(self, obj):
-        return obj.description.message
+class BadRequestResponse(BaseModel):
+    error: str
+    details: dict[str, list[str]]
 
-    def dump_details(self, obj):
-        return obj.description.details
+
+class ServiceErrorResponse(BaseModel):
+    error: str
+    details: str | None
+
+
+def format_validation_errors(exc: RequestValidationError) -> dict[str, list[str]]:
+    details: dict[str, list[str]] = {}
+    for error in exc.errors():
+        loc = error['loc']
+        if loc and loc[0] == 'body':
+            loc = loc[1:]
+        field = '.'.join(str(part) for part in loc) if loc else '__root__'
+        message = error['msg']
+        if message == 'Field required':
+            message = 'Missing data for required field.'
+        elif message.startswith('Value error, '):
+            message = message.removeprefix('Value error, ')
+        details.setdefault(field, []).append(message)
+    return details

@@ -12,6 +12,6 @@ RUN apt-get update && \
 COPY ./src/pyproject.toml ./src/poetry.lock /tmp/
 RUN cd /tmp && \
     poetry config virtualenvs.create false && \
-    poetry install --only main --no-root --no-ansi
+    poetry install --no-root --no-ansi
 
 WORKDIR /app/src

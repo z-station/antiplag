@@ -15,7 +15,7 @@ services:
     ports:
       - "9020:9020"
     restart: on-failure
-    command: gunicorn --bind 0:9020 app.main:app --reload -w 1
+    command: uvicorn app.main:app --host 0.0.0.0 --port 9020 --reload --workers 1
 
 networks:
   localhost:

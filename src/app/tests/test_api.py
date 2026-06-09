@@ -23,7 +23,7 @@ def test_check__ok(client, mocker):
 
     # act
     response = client.post(
-        path='/check/',
+        '/check/',
         json={
             "lang": Lang.CPP,
             "ref_code": "some code",
@@ -38,9 +38,9 @@ def test_check__ok(client, mocker):
 
     # assert
     assert response.status_code == 200
-    assert response.content_type == 'application/json'
-    assert response.json['uuid'] == check_result['uuid']
-    assert response.json['percent'] == check_result['percent']
+    assert 'application/json' in response.headers['content-type']
+    assert response.json()['uuid'] == check_result['uuid']
+    assert response.json()['percent'] == check_result['percent']
     check_mock.assert_called_once_with(
         data=CheckInput(
             lang=Lang.CPP,
@@ -70,7 +70,7 @@ def test_check__service_exception__internal_error(client, mocker):
 
     # act
     response = client.post(
-        path='/check/',
+        '/check/',
         json={
             "lang": Lang.CPP,
             "ref_code": "some code",
@@ -85,9 +85,9 @@ def test_check__service_exception__internal_error(client, mocker):
 
     # assert
     assert response.status_code == 500
-    assert response.content_type == 'application/json'
-    assert response.json['error'] == err_msg
-    assert response.json['details'] == err_details
+    assert 'application/json' in response.headers['content-type']
+    assert response.json()['error'] == err_msg
+    assert response.json()['details'] == err_details
 
 
 def test_check__validation_error__bad_request(
@@ -100,7 +100,7 @@ def test_check__validation_error__bad_request(
 
     # act
     response = client.post(
-        path='/check/',
+        '/check/',
         json={
             "lang": Lang.JAVA,
             "ref_code": "some code"
@@ -109,9 +109,9 @@ def test_check__validation_error__bad_request(
 
     # assert
     assert response.status_code == 400
-    assert response.content_type == 'application/json'
-    assert response.json['error'] == 'Validation Error'
-    assert response.json['details'] == {
+    assert 'application/json' in response.headers['content-type']
+    assert response.json()['error'] == 'Validation Error'
+    assert response.json()['details'] == {
         'candidates': [
             "Missing data for required field."
         ]
@@ -129,7 +129,7 @@ def test_check__not_allowed_lang__bad_request(
 
     # act
     response = client.post(
-        path='/check/',
+        '/check/',
         json={
             "lang": "some lang",
             "ref_code": "some code",
@@ -144,9 +144,9 @@ def test_check__not_allowed_lang__bad_request(
 
     # assert
     assert response.status_code == 400
-    assert response.content_type == 'application/json'
-    assert response.json['error'] == 'Validation Error'
-    assert response.json['details'] == {
+    assert 'application/json' in response.headers['content-type']
+    assert response.json()['error'] == 'Validation Error'
+    assert response.json()['details'] == {
         'lang': ['Must be one of: cpp, java, python, sql.']
     }
     service_mock.assert_not_called()
@@ -167,7 +167,7 @@ def test_check__sql_lang__ok(client, mocker):
 
     # act
     response = client.post(
-        path='/check/',
+        '/check/',
         json={
             "lang": Lang.SQL,
             "ref_code": "SELECT id FROM users",
@@ -182,9 +182,9 @@ def test_check__sql_lang__ok(client, mocker):
 
     # assert
     assert response.status_code == 200
-    assert response.content_type == 'application/json'
-    assert response.json['uuid'] == check_result['uuid']
-    assert response.json['percent'] == check_result['percent']
+    assert 'application/json' in response.headers['content-type']
+    assert response.json()['uuid'] == check_result['uuid']
+    assert response.json()['percent'] == check_result['percent']
     check_mock.assert_called_once_with(
         data=CheckInput(
             lang=Lang.SQL,
@@ -209,7 +209,7 @@ def test_check__unsupported_sql_query__internal_error(client, mocker):
 
     # act
     response = client.post(
-        path='/check/',
+        '/check/',
         json={
             "lang": Lang.SQL,
             "ref_code": "INSERT INTO users VALUES (1)",
@@ -224,6 +224,6 @@ def test_check__unsupported_sql_query__internal_error(client, mocker):
 
     # assert
     assert response.status_code == 500
-    assert response.content_type == 'application/json'
-    assert response.json['error'] == messages.MSG_5
-    assert response.json['details'] is None
+    assert 'application/json' in response.headers['content-type']
+    assert response.json()['error'] == messages.MSG_5
+    assert response.json()['details'] is None
