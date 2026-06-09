@@ -7,12 +7,11 @@ ENV POETRY_VERSION=2.1.3 \
 RUN apt-get update && \
     apt-get -y install nano && \
     apt-get -y install similarity-tester && \
-    pip install --upgrade pip "poetry==${POETRY_VERSION}" && \
-    poetry config virtualenvs.create false
+    pip install --upgrade pip "poetry==${POETRY_VERSION}"
 
-WORKDIR /app
-
-COPY ./src/pyproject.toml ./src/poetry.lock ./
-RUN poetry install --only main --no-root --no-ansi
+COPY ./src/pyproject.toml ./src/poetry.lock /tmp/
+RUN cd /tmp && \
+    poetry config virtualenvs.create false && \
+    poetry install --only main --no-root --no-ansi
 
 WORKDIR /app/src
