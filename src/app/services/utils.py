@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from app.service.enums import Lang
+from app.services.enums import Lang
 from app.config import TEMP_DIR
 
 

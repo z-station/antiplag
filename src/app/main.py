@@ -11,8 +11,8 @@ from app.schema import (
     CheckResponse,
     format_validation_errors,
 )
-from app.service.exceptions import ServiceException
-from app.service.main import AntiplagService
+from app.services.exceptions import ServiceException
+from app.services.main import AntiplagService
 
 APP_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=APP_DIR / 'templates')

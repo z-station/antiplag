@@ -1,11 +1,11 @@
-from app.service.entities import (
+from app.services.entities import (
     Candidate,
     CheckInput,
     CheckResult
 )
-from app.service.exceptions import ServiceException, UnsupportedQueryException
-from app.service import messages
-from app.service.enums import Lang
+from app.services.exceptions import ServiceException, UnsupportedQueryException
+from app.services import messages
+from app.services.enums import Lang
 
 
 def test_check__ok(client, mocker):
@@ -17,7 +17,7 @@ def test_check__ok(client, mocker):
     )
 
     check_mock = mocker.patch(
-        'app.service.main.AntiplagService.check',
+        'app.services.main.AntiplagService.check',
         return_value=check_result
     )
 
@@ -61,7 +61,7 @@ def test_check__service_exception__internal_error(client, mocker):
     err_msg = 'some message'
     err_details = 'some details'
     mocker.patch(
-        'app.service.main.AntiplagService.check',
+        'app.services.main.AntiplagService.check',
         side_effect=ServiceException(
             message=err_msg,
             details=err_details
@@ -96,7 +96,7 @@ def test_check__validation_error__bad_request(
 ):
 
     # arrange
-    service_mock = mocker.patch('app.service.main.AntiplagService.check')
+    service_mock = mocker.patch('app.services.main.AntiplagService.check')
 
     # act
     response = client.post(
@@ -125,7 +125,7 @@ def test_check__not_allowed_lang__bad_request(
 ):
 
     # arrange
-    service_mock = mocker.patch('app.service.main.AntiplagService.check')
+    service_mock = mocker.patch('app.services.main.AntiplagService.check')
 
     # act
     response = client.post(
@@ -161,7 +161,7 @@ def test_check__sql_lang__ok(client, mocker):
     )
 
     check_mock = mocker.patch(
-        'app.service.main.AntiplagService.check',
+        'app.services.main.AntiplagService.check',
         return_value=check_result
     )
 
@@ -203,7 +203,7 @@ def test_check__unsupported_sql_query__internal_error(client, mocker):
 
     # arrange
     mocker.patch(
-        'app.service.main.AntiplagService.check',
+        'app.services.main.AntiplagService.check',
         side_effect=UnsupportedQueryException()
     )
 

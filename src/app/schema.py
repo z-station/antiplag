@@ -1,8 +1,8 @@
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, field_validator
 
-from app.service.entities import CheckInput
-from app.service.enums import Lang
+from app.services.entities import CheckInput
+from app.services.enums import Lang
 
 
 class CandidateModel(BaseModel):
