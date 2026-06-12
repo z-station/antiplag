@@ -49,6 +49,7 @@ class SqlPlagService(AntiplagBaseService):
 
         for candidate in data['candidates']:
             candidate_type = self._get_query_type(candidate['code'])
+            uuid = candidate['uuid']
 
             if candidate_type != ref_type:
                 continue
@@ -58,9 +59,9 @@ class SqlPlagService(AntiplagBaseService):
                 candidate_code=candidate['code']
             )
 
-            plag_percent_by_uuids[candidate['uuid']] = self._calculate_percent(
-                sqlplag,
-                ref_type
+            plag_percent_by_uuids[uuid] = self._calculate_percent(
+                sqlplag=sqlplag,
+                query_type=ref_type
             )
 
         if not plag_percent_by_uuids:

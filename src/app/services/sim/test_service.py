@@ -61,18 +61,18 @@ def test_get_value_from_sim_console_output__index_error__raise_exception():
     assert ex.value.details == 'list index out of range'
 
 
-def test_call_sim__language_cpp_identical_code__full_plagiat():
+def test_call_sim__language_cpp_identical_code__max_plagiarism():
 
     # arrange
-    ref_code = '''\
-#include <iostream>
-int main() {
-    int a, b, c;
-    std::cin >> a >> b >> c;
-    std::cout << a + b + c << '\\n';
-    return 0;
-}
-'''
+    ref_code = (
+        '#include <iostream>\n'
+        'int main() {\n'
+        '    int a, b, c;\n'
+        '    std::cin >> a >> b >> c;\n'
+        '    std::cout << a + b + c << \'\\n\';\n'
+        '    return 0;\n'
+        '}\n'
+    )
     candidate_code = ref_code
     service = SimService()
     reference_file = PlagFile(code=ref_code, lang=Lang.CPP)
@@ -101,35 +101,35 @@ int main() {
         reference_file.remove()
 
 
-def test_call_sim__language_cpp_different_code__small_plagiat():
+def test_call_sim__language_cpp_different_code__min_plagiarism():
 
     # arrange
-    ref_code = '''\
-#include <iostream>
-int main() {
-    int a, b, c;
-    std::cin >> a >> b >> c;
-    std::cout << a + b + c << '\\n';
-    return 0;
-}
-'''
-    candidate_code = '''\
-#include <iostream>
-#include <vector>
-#include <algorithm>
-int main() {
-    std::vector<int> v;
-    int n, x;
-    std::cin >> n;
-    for (int i = 0; i < n; ++i) {
-        std::cin >> x;
-        v.push_back(x);
-    }
-    std::sort(v.begin(), v.end());
-    for (int val : v) std::cout << val << ' ';
-    return 0;
-}
-'''
+    ref_code = (
+        '#include <iostream>\n'
+        'int main() {\n'
+        '    int a, b, c;\n'
+        '    std::cin >> a >> b >> c;\n'
+        '    std::cout << a + b + c << \'\\n\';\n'
+        '    return 0;\n'
+        '}\n'
+    )
+    candidate_code = (
+        '#include <iostream>\n'
+        '#include <vector>\n'
+        '#include <algorithm>\n'
+        'int main() {\n'
+        '    std::vector<int> v;\n'
+        '    int n, x;\n'
+        '    std::cin >> n;\n'
+        '    for (int i = 0; i < n; ++i) {\n'
+        '        std::cin >> x;\n'
+        '        v.push_back(x);\n'
+        '    }\n'
+        '    std::sort(v.begin(), v.end());\n'
+        '    for (int val : v) std::cout << val << \' \';\n'
+        '    return 0;\n'
+        '}\n'
+    )
     service = SimService()
     reference_file = PlagFile(code=ref_code, lang=Lang.CPP)
     candidate_file = PlagFile(code=candidate_code, lang=Lang.CPP)
@@ -157,22 +157,22 @@ int main() {
         reference_file.remove()
 
 
-def test_call_sim__language_java_identical_code__full_plagiat():
+def test_call_sim__language_java_identical_code__max_plagiarism():
 
     # arrange
-    ref_code = '''\
-import java.util.Scanner;
-
-public class Ref {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        int a = sc.nextInt();
-        int b = sc.nextInt();
-        int c = sc.nextInt();
-        System.out.println(a + b + c);
-    }
-}
-'''
+    ref_code = (
+        'import java.util.Scanner;\n'
+        '\n'
+        'public class Ref {\n'
+        '    public static void main(String[] args) {\n'
+        '        Scanner sc = new Scanner(System.in);\n'
+        '        int a = sc.nextInt();\n'
+        '        int b = sc.nextInt();\n'
+        '        int c = sc.nextInt();\n'
+        '        System.out.println(a + b + c);\n'
+        '    }\n'
+        '}\n'
+    )
     candidate_code = ref_code
     service = SimService()
     reference_file = PlagFile(code=ref_code, lang=Lang.JAVA)
@@ -201,35 +201,35 @@ public class Ref {
         reference_file.remove()
 
 
-def test_call_sim__language_java_different_code__small_plagiat():
+def test_call_sim__language_java_different_code__min_plagiarism():
 
     # arrange
-    ref_code = '''\
-import java.util.Scanner;
-
-public class Ref {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        int a = sc.nextInt();
-        int b = sc.nextInt();
-        int c = sc.nextInt();
-        System.out.println(a + b + c);
-    }
-}
-'''
-    candidate_code = '''\
-public class CandDiff {
-    private int value;
-
-    public CandDiff(int value) {
-        this.value = value;
-    }
-
-    public int getValue() {
-        return value;
-    }
-}
-'''
+    ref_code = (
+        'import java.util.Scanner;\n'
+        '\n'
+        'public class Ref {\n'
+        '    public static void main(String[] args) {\n'
+        '        Scanner sc = new Scanner(System.in);\n'
+        '        int a = sc.nextInt();\n'
+        '        int b = sc.nextInt();\n'
+        '        int c = sc.nextInt();\n'
+        '        System.out.println(a + b + c);\n'
+        '    }\n'
+        '}\n'
+    )
+    candidate_code = (
+        'public class CandDiff {\n'
+        '    private int value;\n'
+        '\n'
+        '    public CandDiff(int value) {\n'
+        '        this.value = value;\n'
+        '    }\n'
+        '\n'
+        '    public int getValue() {\n'
+        '        return value;\n'
+        '    }\n'
+        '}\n'
+    )
     service = SimService()
     reference_file = PlagFile(code=ref_code, lang=Lang.JAVA)
     candidate_file = PlagFile(code=candidate_code, lang=Lang.JAVA)

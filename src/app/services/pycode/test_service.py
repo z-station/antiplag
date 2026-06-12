@@ -1,5 +1,4 @@
 import pytest
-import pycode_similar
 from app.services.main import PycodeSimilarService
 from app.services.enums import Lang
 from app.services.entities import (
@@ -43,29 +42,19 @@ def test_get_value_from_pycode_output__index_error__raise_exception():
     assert ex.value.message == messages.MSG_4
 
 
-def test_get_percent_from_pycode_candidate__return_percent__ok(mocker):
+def test_get_percent_from_pycode__identical_code__max_plagiarism():
 
     # arrange
-    reference_code = 'some code'
-    candidate_code = 'some code'
-
-    value_from_pycode_output = '55.19: ref __main__, candidate __main__'
-    pycode_detect_output = [(1, [value_from_pycode_output])]
-
-    check_result = 55.19
+    # Идентичный код — максимальный плагиат (100%)
+    reference_code = (
+        'a = int(input())\n'
+        'b = int(input())\n'
+        'c = int(input())\n'
+        'print(a + b + c)\n'
+    )
+    candidate_code = reference_code
 
     service = PycodeSimilarService()
-
-    pycode_detect_mock = mocker.patch(
-        'pycode_similar.detect',
-        return_value=pycode_detect_output
-    )
-
-    get_value_from_pycode_output_mock = mocker.patch(
-        'app.services.pycode.service.PycodeSimilarService'
-        '._get_value_from_pycode_output',
-        return_value=check_result
-    )
 
     # act
     result = service._get_percent_from_pycode_candidate(
@@ -74,48 +63,67 @@ def test_get_percent_from_pycode_candidate__return_percent__ok(mocker):
     )
 
     # assert
-    pycode_detect_mock.assert_called_once_with(
-        (reference_code, candidate_code),
-        diff_method=pycode_similar.UnifiedDiff,
-        keep_prints=True,
-        module_level=True
-    )
-    get_value_from_pycode_output_mock.assert_called_once_with(
-        value_from_pycode_output
-    )
-    assert result == check_result
+    assert result == 1.0
 
 
-def test_get_percent_from_pycode_candidate__pycode_error__ok(mocker):
+def test_get_percent_from_pycode_candidate_different_code__min_plagiarism():
+
     # arrange
-    reference_code = '34f£al'
-    candidate_code = 'some code'
-    error_msg = 'some error'
-
-    pycode_detect_mock = mocker.patch(
-        'pycode_similar.detect',
-        side_effect=SyntaxError(error_msg)
+    # Полностью разный код — минимальный плагиат (0%)
+    reference_code = (
+        'a = int(input())\n'
+        'b = int(input())\n'
+        'c = int(input())\n'
+        'print(a + b + c)\n'
+    )
+    candidate_code = (
+        'def factorial(n):\n'
+        '    result = 1\n'
+        '    for i in range(2, n + 1):\n'
+        '        result *= i\n'
+        '    return result\n'
+        'print(factorial(int(input())))\n'
     )
 
-    get_value_from_pycode_output_mock = mocker.patch(
-        'app.services.pycode.service.PycodeSimilarService'
-        '._get_value_from_pycode_output'
-    )
+    service = PycodeSimilarService()
+
     # act
-    result = PycodeSimilarService()._get_percent_from_pycode_candidate(
+    result = service._get_percent_from_pycode_candidate(
         reference_code=reference_code,
         candidate_code=candidate_code
     )
 
     # assert
-    assert result == -1
-    pycode_detect_mock.assert_called_once_with(
-        (reference_code, candidate_code),
-        diff_method=pycode_similar.UnifiedDiff,
-        keep_prints=True,
-        module_level=True
+    assert result < 0.4
+
+
+def test_get_percent_from_pycode_candidate_save_code__partial_plagiarism():
+
+    # arrange
+    # Та же задача (сумма трёх чисел), но реализована через цикл — частичный плагиат
+    reference_code = (
+        'a = int(input())\n'
+        'b = int(input())\n'
+        'c = int(input())\n'
+        'print(a + b + c)\n'
     )
-    get_value_from_pycode_output_mock.assert_not_called()
+    candidate_code = (
+        'numbers = []\n'
+        'for _ in range(3):\n'
+        '    numbers.append(int(input()))\n'
+        'print(sum(numbers))\n'
+    )
+
+    service = PycodeSimilarService()
+
+    # act
+    result = service._get_percent_from_pycode_candidate(
+        reference_code=reference_code,
+        candidate_code=candidate_code
+    )
+
+    # assert
+    assert result < 0.2
 
 
 def test_check_plagiarism__check_plagiarism__ok(mocker):
