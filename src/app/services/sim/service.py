@@ -39,9 +39,14 @@ class SimService(AntiplagBaseService):
         else:
             return result
 
-    def _call_sim(self, cmd: str):
+    def _call_sim(self, cmd: str) -> str:
         return subprocess.getoutput(cmd=cmd)
 
+    def _get_reference_file(self, code: str, lang: str) -> PlagFile:
+        return PlagFile(code=code, lang=lang)
+
+    def _get_candidate_code_file(self, code: str, lang: str) -> PlagFile:
+        return PlagFile(code=code, lang=lang)
 
     def check_plagiarism(self, data: CheckInput) -> CheckResult:
 
@@ -55,12 +60,15 @@ class SimService(AntiplagBaseService):
         checker_module_name = 'sim_c++' if lang == Lang.CPP else 'sim_java'
         checker_command = f'/usr/bin/{checker_module_name} -r4 -s -p'
 
-        reference_file = PlagFile(code=ref_code, lang=lang)
+        reference_file = self._get_reference_file(lang=lang, code=ref_code)
         reference_path = reference_file.filepath
 
         plag_percent_by_uuids = {}
         for candidate in candidates:
-            candidate_code_file = PlagFile(code=candidate['code'], lang=lang)
+            candidate_code_file = self._get_candidate_code_file(
+                code=candidate['code'],
+                lang=lang
+            )
             candidate_path = candidate_code_file.filepath
             cmd = f'{checker_command} {reference_path} {candidate_path}'
             sim_cmd = self._call_sim(cmd=cmd)
