@@ -405,3 +405,71 @@ def test_check_plagiarism__language_java_check_plagiarism__ok(mocker):
         plag_percent_by_uuids
     )
     assert result == check_result
+
+
+def test_get_reference_file__language_cpp__ok():
+
+    # arrange
+    code = 'int main() { return 0; }'
+    service = SimService()
+
+    # act
+    result = service._get_reference_file(code=code, lang=Lang.CPP)
+
+    try:
+        # assert
+        assert isinstance(result, PlagFile)
+        assert result.filename.endswith('.cpp')
+    finally:
+        result.remove()
+
+
+def test_get_reference_file__language_java__ok():
+
+    # arrange
+    code = 'public class Ref { public static void main(String[] args) {} }'
+    service = SimService()
+
+    # act
+    result = service._get_reference_file(code=code, lang=Lang.JAVA)
+
+    try:
+        # assert
+        assert isinstance(result, PlagFile)
+        assert result.filename.endswith('.java')
+    finally:
+        result.remove()
+
+
+def test_get_candidate_code_file__language_cpp__ok():
+
+    # arrange
+    code = 'int main() { return 0; }'
+    service = SimService()
+
+    # act
+    result = service._get_candidate_code_file(code=code, lang=Lang.CPP)
+
+    try:
+        # assert
+        assert isinstance(result, PlagFile)
+        assert result.filename.endswith('.cpp')
+    finally:
+        result.remove()
+
+
+def test_get_candidate_code_file__language_java__ok():
+
+    # arrange
+    code = 'public class Cand { public static void main(String[] args) {} }'
+    service = SimService()
+
+    # act
+    result = service._get_candidate_code_file(code=code, lang=Lang.JAVA)
+
+    try:
+        # assert
+        assert isinstance(result, PlagFile)
+        assert result.filename.endswith('.java')
+    finally:
+        result.remove()

@@ -11,7 +11,6 @@ from app.services.entities import (
 from app.services.exceptions import UnsupportedQueryException
 
 
-
 def test_check_plagiarism__select_queries__ok(mocker):
 
     # arrange
@@ -35,7 +34,8 @@ def test_check_plagiarism__select_queries__ok(mocker):
     )
     expected_result = CheckResult(uuid='candidate-1', percent=plag_percent)
     get_candidate_with_max_plag_mock = mocker.patch(
-        'app.services.sql.service.SqlPlagService._get_candidate_with_max_plag',
+        'app.services.sql.service.SqlPlagService'
+        '._get_candidate_with_max_plag',
         return_value=expected_result
     )
 
@@ -77,7 +77,8 @@ def test_check_plagiarism__cte_queries__ok(mocker):
     )
     expected_result = CheckResult(uuid='candidate-1', percent=plag_percent)
     get_candidate_with_max_plag_mock = mocker.patch(
-        'app.services.sql.service.SqlPlagService._get_candidate_with_max_plag',
+        'app.services.sql.service.SqlPlagService'
+        '._get_candidate_with_max_plag',
         return_value=expected_result
     )
 
@@ -127,7 +128,7 @@ def test_check_plagiarism__unsupported_ref_query__raise_exception(mocker):
     assert ex.value.message == messages.MSG_5
 
 
-def test_check_plagiarism__skip_candidates_with_other_query_type(mocker):
+def test_check_plagiarism__skip_candidates_with_other_type(mocker):
 
     # arrange
     ref_code = 'SELECT 1 * FROM t'
@@ -153,7 +154,8 @@ def test_check_plagiarism__skip_candidates_with_other_query_type(mocker):
     )
     expected_result = CheckResult(uuid='candidate-2', percent=plag_percent)
     get_candidate_with_max_plag_mock = mocker.patch(
-        'app.services.sql.service.SqlPlagService._get_candidate_with_max_plag',
+        'app.services.sql.service.SqlPlagService'
+        '._get_candidate_with_max_plag',
         return_value=expected_result
     )
 
@@ -200,7 +202,7 @@ def test_check_plagiarism__different_code__min_plagiarism(mocker):
     assert result == CheckResult(uuid=None, percent=0.0)
 
 
-def test_check_plagiarism__identical_select_queries__max_plagiarism(mocker):
+def test_check_plagiarism__identical_select_queries__max_plag(mocker):
 
     # arrange
     ref_code = (
@@ -230,7 +232,8 @@ def test_check_plagiarism__identical_select_queries__max_plagiarism(mocker):
         return_value=plag_percent
     )
     get_candidate_with_max_plag_mock = mocker.patch(
-        'app.services.sql.service.SqlPlagService._get_candidate_with_max_plag',
+        'app.services.sql.service.SqlPlagService'
+        '._get_candidate_with_max_plag',
         return_value=expected_result
     )
 
@@ -286,7 +289,8 @@ def test_check_plagiarism__different_query__min_plagiarism(mocker):
     )
     expected_result = CheckResult(uuid=None, percent=plag_percent)
     get_candidate_with_max_plag_mock = mocker.patch(
-        'app.services.sql.service.SqlPlagService._get_candidate_with_max_plag',
+        'app.services.sql.service.SqlPlagService'
+        '._get_candidate_with_max_plag',
         return_value=expected_result
     )
 
@@ -345,7 +349,8 @@ def test_check_plagiarism__same_queries__partial_plagiarism(mocker):
     )
     expected_result = CheckResult(uuid='candidate-1', percent=plag_percent)
     get_candidate_with_max_plag_mock = mocker.patch(
-        'app.services.sql.service.SqlPlagService._get_candidate_with_max_plag',
+        'app.services.sql.service.SqlPlagService'
+        '._get_candidate_with_max_plag',
         return_value=expected_result
     )
 
@@ -354,9 +359,125 @@ def test_check_plagiarism__same_queries__partial_plagiarism(mocker):
     # act
     result = service.check_plagiarism(test_data)
 
+    # assert
     assert get_query_type_mock.call_count == 2
     calculate_percent_mock.assert_called_once()
     get_candidate_with_max_plag_mock.assert_called_once_with(
         {'candidate-1': plag_percent}
     )
     assert result == expected_result
+
+
+# --- _get_query_type ---
+
+def test_get_query_type__select__ok():
+    assert SqlPlagService._get_query_type('SELECT 1') == 'select'
+
+
+def test_get_query_type__select_leading_spaces__ok():
+    assert SqlPlagService._get_query_type('  SELECT 1') == 'select'
+
+
+def test_get_query_type__select_uppercase__ok():
+    assert SqlPlagService._get_query_type('SELECT id FROM t') == 'select'
+
+
+def test_get_query_type__cte__ok():
+    query = 'WITH t AS (SELECT 1) SELECT * FROM t'
+    assert SqlPlagService._get_query_type(query) == 'with'
+
+
+def test_get_query_type__insert__unknown():
+    query = 'INSERT INTO users VALUES (1)'
+    assert SqlPlagService._get_query_type(query) == 'unknown'
+
+
+def test_get_query_type__empty_string__unknown():
+    assert SqlPlagService._get_query_type('') == 'unknown'
+
+
+# --- _normalize_percent ---
+
+def test_normalize_percent__normal_value__ok():
+    assert SqlPlagService._normalize_percent(82.0) == 0.82
+
+
+def test_normalize_percent__exactly_100__ok():
+    assert SqlPlagService._normalize_percent(100.0) == 1.0
+
+
+def test_normalize_percent__zero__ok():
+    assert SqlPlagService._normalize_percent(0.0) == 0.0
+
+
+def test_normalize_percent__over_100__clamped_to_1():
+    assert SqlPlagService._normalize_percent(110.0) == 1.0
+
+
+def test_normalize_percent__negative__clamped_to_0():
+    assert SqlPlagService._normalize_percent(-5.0) == 0.0
+
+
+# --- _calculate_percent ---
+
+def test_calculate_percent__select__calls_similarity_pct(mocker):
+
+    # arrange
+    sqlplag_mock = mocker.Mock()
+    sqlplag_mock.similarity_percentage.return_value = 82.0
+
+    normalize_mock = mocker.patch(
+        'app.services.sql.service.SqlPlagService._normalize_percent',
+        return_value=0.82
+    )
+
+    # act
+    result = SqlPlagService._calculate_percent(
+        sqlplag=sqlplag_mock,
+        query_type='select'
+    )
+
+    # assert
+    sqlplag_mock.similarity_percentage.assert_called_once()
+    normalize_mock.assert_called_once_with(82.0)
+    assert result == 0.82
+
+
+def test_calculate_percent__with__calls_cte_similarity_pct(mocker):
+
+    # arrange
+    sqlplag_mock = mocker.Mock()
+    sqlplag_mock.cte_similarity_percentage.return_value = 90.0
+
+    normalize_mock = mocker.patch(
+        'app.services.sql.service.SqlPlagService._normalize_percent',
+        return_value=0.9
+    )
+
+    # act
+    result = SqlPlagService._calculate_percent(
+        sqlplag=sqlplag_mock,
+        query_type='with'
+    )
+
+    # assert
+    sqlplag_mock.cte_similarity_percentage.assert_called_once()
+    normalize_mock.assert_called_once_with(90.0)
+    assert result == 0.9
+
+
+def test_calculate_percent__unknown_type__raise_exception(mocker):
+
+    # arrange
+    sqlplag_mock = mocker.Mock()
+
+    # act
+    with pytest.raises(UnsupportedQueryException):
+        SqlPlagService._calculate_percent(
+            sqlplag=sqlplag_mock,
+            query_type='unknown'
+        )
+
+    # assert
+    sqlplag_mock.similarity_percentage.assert_not_called()
+    sqlplag_mock.cte_similarity_percentage.assert_not_called()
